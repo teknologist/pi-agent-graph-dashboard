@@ -267,7 +267,15 @@ export function createGraphDashboardRuntime(options: { directory: string; append
     const exportPath = join(options.directory, `${snapshot.runId}.html`)
     const fileUrl = pathToFileURL(exportPath).href
     const pending = unreconciled.size ? ' · reconciliation pending' : ''
-    const label = `\uf0e8 ${snapshot.runName.slice(0, 64)} · ${snapshot.status}${pending}`
+    const nodes = snapshot.nodes.filter(node => node.currentAttempt)
+    const blocked = nodes.filter(node => node.blocker || node.gate?.state === 'blocked' || node.execution.state === 'failed' || node.verification.state === 'failed')
+    const running = nodes.filter(node => node.execution.state === 'running')
+    const waiting = nodes.filter(node => node.wait || node.execution.state === 'waiting' || node.gate?.state === 'waiting' || node.gate?.state === 'awaiting-approval')
+    const selected = blocked.length ? blocked : running.length ? running : waiting
+    const activity = snapshot.status !== 'active' ? snapshot.status : blocked.length ? 'blocked' : running.length ? 'running' : waiting.length ? 'waiting' : 'active'
+    const color = activity === 'succeeded' ? 32 : activity === 'blocked' || activity === 'partial-failure' ? 31 : activity === 'running' || activity === 'active' ? 34 : 33
+    const nodeLabel = snapshot.status === 'active' && selected.length ? ` · ${selected[0].label.slice(0, 40)}${selected.length > 1 ? ` +${selected.length - 1}` : ''}` : ''
+    const label = `\uf0e8 ${snapshot.runName.slice(0, 64)} · \x1b[${color}m${activity}\x1b[39m · ${snapshot.currentStage.slice(0, 40)}${nodeLabel}${pending}`
     ctx.ui.setStatus(STATUS, `\x1b]8;;${endpoint ?? fileUrl}\x1b\\${label}\x1b]8;;\x1b\\`)
     return { runId: snapshot.runId, reportUrl: endpoint, exportPath, fileUrl }
   }

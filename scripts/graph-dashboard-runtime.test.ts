@@ -92,6 +92,24 @@ async function bound(state: ReturnType<typeof setup>) {
   return result.runId as string
 }
 
+test('footer shows colored activity, current stage, and parallel current nodes', async () => {
+  const state = setup()
+  const nodes: Declaration[] = ['analysis-1', 'analysis-2'].map(id => ({ ...declaration(id), kind: 'parent', nativeName: null }))
+  const result = await state.runtime.execute(create(nodes), state.owner.ctx)
+  await state.runtime.execute({ operation: 'update', runId: result.runId, nodes: [
+    { id: 'analysis-1', execution: 'running' }, { id: 'analysis-2', execution: 'running' },
+  ] }, state.owner.ctx)
+  expect(state.owner.statuses.at(-1)).toContain('\x1b[34mrunning\x1b[39m · analysis · analysis-1 +1')
+  expect(state.owner.statuses.at(-1)).toContain('\x1b]8;;')
+  await state.runtime.execute({ operation: 'update', runId: result.runId, nodes: [
+    { id: 'analysis-1', execution: 'failed' },
+  ] }, state.owner.ctx)
+  expect(state.owner.statuses.at(-1)).toContain('\x1b[31mblocked\x1b[39m · analysis · analysis-1')
+  await state.runtime.execute({ operation: 'update', runId: result.runId, status: 'succeeded' }, state.owner.ctx)
+  expect(state.owner.statuses.at(-1)).toContain('\x1b[32msucceeded\x1b[39m · analysis')
+  expect(state.owner.statuses.at(-1)).not.toContain('analysis-1')
+})
+
 // MR75's first public checkpoint declares these phases with only two edges.
 // Names remain checkpoint metadata; topology must not supply native receipts.
 test('MR75 sparse declarations produce connected command phases and parallel analysis prerequisites', async () => {
