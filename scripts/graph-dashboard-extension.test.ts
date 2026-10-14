@@ -25,7 +25,7 @@ test('resync command requires confirmation and preserves the current conversatio
   const messages: string[] = []
   const notices: string[] = []
   let confirmed = false, confirmations = 0, idleWaits = 0
-  let tool: { execute(id: string, input: unknown, signal: unknown, update: unknown, ctx: ExtensionContext): Promise<{ details: { runId: string } }> }
+  let tool: { execute(id: string, input: unknown, signal: unknown, update: unknown, ctx: ExtensionContext): Promise<{ content: { type: string; text: string }[]; details: { runId: string } }> }
   const ctx = {
     hasUI: true, mode: 'json',
     waitForIdle: async () => { idleWaits++ },
@@ -68,8 +68,19 @@ test('resync command requires confirmation and preserves the current conversatio
   expect(entries.slice(0, branch.length)).toEqual(branch)
   expect(messages.at(-1)).toContain('Private backup:')
   expect(messages.at(-1)).toContain('Parent gates and verification decisions are unchanged')
+  expect(messages.at(-1)).toContain(`operation="recover" and runId="${created.details.runId}"`)
+  expect(messages.at(-1)).toContain('/agent-graph-dashboard-open')
   const latest = entries.filter(entry => entry.customType === 'agent-graph-dashboard:v1').at(-1)
   expect((latest!.data as { snapshot: GraphSnapshot }).snapshot).toEqual(JSON.parse(readFileSync(path, 'utf8')))
+  Object.defineProperty(ctx, 'executeTool', { value: async () => { throw new Error('No workers are declared in this fixture') } })
+  const recovered = await tool.execute('recover', { operation: 'recover', runId: created.details.runId }, undefined, undefined, ctx)
+  const guidance = recovered.content[0].text
+  expect(guidance).toContain(`Inspect dashboard run ${created.details.runId} after recovery`)
+  expect(guidance).toContain('Recovery reconciles worker status only')
+  expect(guidance).toContain('Do not clear an approval gate without recorded user approval')
+  expect(guidance).toContain('Preserve unresolved blockers')
+  expect(guidance).toContain('/agent-graph-dashboard-open')
+  expect(created.content[0].text).not.toContain('Next steps:')
 })
 
 let shutdown: (() => Promise<void>) | undefined

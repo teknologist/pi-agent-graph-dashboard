@@ -131,7 +131,7 @@ export default function (pi: ExtensionAPI) {
         const result = await ensure().resync(dashboardContext(ctx))
         currentRunId = result.runId
         announce(result)
-        pi.sendMessage({ customType: 'agent-graph-dashboard:resync', content: `Reporting resynced from checkpoint ${result.sourceCheckpointId}. Replayed ${result.replayedEntryIds.length} current-branch observations.\nPrivate backup: ${result.backupPath}\nParent gates and verification decisions are unchanged. Narrative claims and failed parent updates are not applied. Use recover to reconcile current native status.`, display: true }, { triggerTurn: false })
+        pi.sendMessage({ customType: 'agent-graph-dashboard:resync', content: `Reporting resynced from checkpoint ${result.sourceCheckpointId}. Replayed ${result.replayedEntryIds.length} current-branch observations.\nPrivate backup: ${result.backupPath}\nParent gates and verification decisions are unchanged. Narrative claims and failed parent updates are not applied. \n1. Ask your agent: Run agent_graph_dashboard with operation="recover" and runId="${result.runId}".\n2. After recovery, follow the repair prompt in its output. Recovery updates worker status, not parent-owned blockers or decisions.\n3. Run /agent-graph-dashboard-open to inspect the report.`, display: true }, { triggerTurn: false })
       } catch (error) {
         ctx.ui.notify(`Graph dashboard: resync failed: ${error instanceof Error ? error.message : String(error)}. Original conversation entries and workers are unchanged.`, 'error')
       }
@@ -163,7 +163,8 @@ export default function (pi: ExtensionAPI) {
         const result = await ensure().execute(input as DashboardInput, dashboardContext(ctx))
         currentRunId = result.runId
         if (input.operation === 'create' || input.operation === 'recover' || (input.operation === 'update' && input.status && input.status !== 'active')) announce(result)
-        return { content: [{ type: 'text', text: `Run: ${result.runId}\nReport: ${result.reportUrl ?? 'Unavailable'}\n[Offline HTML export](${result.fileUrl})\nAbsolute path: ${result.exportPath}` }], details: result }
+        const guidance = input.operation === 'recover' ? `\n\nRecovery reconciles worker status only. Parent-owned blockers, waits, approval gates, verification decisions, and run status can still be stale. Recovery does not prove that work is complete.\n\nNext steps:\n1. Give your agent this prompt:\n"Inspect dashboard run ${result.runId} after recovery. Check unresolved native status first; report unavailable evidence instead of assuming completion. Compare blocked nodes, waits, gates, verification, and run status with current task state and authoritative evidence. Use agent_graph_dashboard updates only for corrections supported by that evidence. Do not clear an approval gate without recorded user approval, mark work verified without independent checks, or respawn workers to repair reporting. Preserve unresolved blockers. Explain each correction and each remaining blocker, then show the report links."\n2. Supply any missing evidence or approval the agent requests.\n3. Run /agent-graph-dashboard-open and confirm the report matches the evidence.` : ''
+        return { content: [{ type: 'text', text: `Run: ${result.runId}\nReport: ${result.reportUrl ?? 'Unavailable'}\n[Offline HTML export](${result.fileUrl})\nAbsolute path: ${result.exportPath}${guidance}` }], details: result }
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error)
         ctx.ui.notify(`Graph dashboard: reporting operation failed: ${reason}; execution and parent gates are unchanged`, 'error')
