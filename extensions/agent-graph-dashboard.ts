@@ -118,6 +118,25 @@ export default function (pi: ExtensionAPI) {
       await openReport(ctx)
     },
   })
+  pi.registerCommand('agent-graph-dashboard-resync', {
+    description: 'Back up and resync this report from an exact historical checkpoint without moving the conversation.',
+    handler: async (args, ctx) => {
+      if (args.trim()) { ctx.ui.notify('Use /agent-graph-dashboard-resync without arguments. Paths and snapshots are not accepted.', 'error'); return }
+      if (!ctx.hasUI) { ctx.ui.notify('Resync requires user confirmation in an interactive session.', 'error'); return }
+      await ctx.waitForIdle()
+      const sessionId = ctx.sessionManager.getSessionId(), leafId = ctx.sessionManager.getLeafId()
+      if (!await ctx.ui.confirm('Resync graph dashboard?', 'Back up the session and report, then restore reporting from the matching historical checkpoint. Replay exact worker receipts on this branch. Keep approval gates and verification decisions unchanged.')) return
+      if (sessionId !== ctx.sessionManager.getSessionId() || leafId !== ctx.sessionManager.getLeafId()) { ctx.ui.notify('Session position changed during confirmation. Retry resync.', 'error'); return }
+      try {
+        const result = await ensure().resync(dashboardContext(ctx))
+        currentRunId = result.runId
+        announce(result)
+        pi.sendMessage({ customType: 'agent-graph-dashboard:resync', content: `Reporting resynced from checkpoint ${result.sourceCheckpointId}. Replayed ${result.replayedEntryIds.length} current-branch observations.\nPrivate backup: ${result.backupPath}\nParent gates and verification decisions are unchanged. Narrative claims and failed parent updates are not applied. Use recover to reconcile current native status.`, display: true }, { triggerTurn: false })
+      } catch (error) {
+        ctx.ui.notify(`Graph dashboard: resync failed: ${error instanceof Error ? error.message : String(error)}. Original conversation entries and workers are unchanged.`, 'error')
+      }
+    },
+  })
   pi.registerCommand('agent-graph-dashboard', {
     description: 'Show the current parent-owned graph report. Direct status recovery uses the reporting tool.',
     handler: async (args, ctx) => {

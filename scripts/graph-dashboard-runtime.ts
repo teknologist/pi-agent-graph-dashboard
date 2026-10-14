@@ -1,5 +1,6 @@
-import { randomUUID, randomBytes } from 'node:crypto'
-import { closeSync, constants, fsyncSync, lstatSync, mkdirSync, openSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
+import { randomUUID, randomBytes, createHash } from 'node:crypto'
+import { isDeepStrictEqual } from 'node:util'
+import { closeSync, constants, fsyncSync, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process'
@@ -21,7 +22,7 @@ export type DashboardInput =
 export interface DashboardContext {
   cwd?: string
   hasUI?: boolean
-  sessionManager: { getSessionId(): string; getSessionFile(): string | undefined; getBranch(): readonly unknown[]; getLeafId(): string | null }
+  sessionManager: { getSessionId(): string; getSessionFile(): string | undefined; getBranch(): readonly unknown[]; getEntries?(): readonly unknown[]; getLeafId(): string | null }
   ui: { notify(text: string, level?: 'info' | 'warning' | 'error'): void; setStatus(key: string, text: string | undefined): void }
   executeTool?: (name: string, args: unknown) => Promise<unknown>
 }
@@ -380,9 +381,7 @@ export function createGraphDashboardRuntime(options: { directory: string; append
     queue = result.catch(() => {})
     return result
   }
-  function branchCheckpoint(ctx: Context) {
-    const entry = branch(ctx).reverse().find(entry => entry.type === 'custom' && entry.customType === ENTRY)
-    if (!entry) return null
+  function readCheckpoint(entry: Record<string, unknown>) {
     const saved = entry.data as Checkpoint
     exact(saved, ['version', 'snapshot', 'names', 'bindings'])
     if (saved.version !== 1 || !saved.names || !Array.isArray(saved.bindings)) fail('invalid checkpoint')
@@ -390,6 +389,171 @@ export function createGraphDashboardRuntime(options: { directory: string; append
     validateCheckpointMetadata(snapshot, saved.names, saved.bindings)
     if (typeof entry.id !== 'string') fail('missing checkpoint entry identity')
     return { checkpoint: structuredClone({ ...saved, snapshot }), id: entry.id }
+  }
+  function branchCheckpoint(ctx: Context) {
+    const entry = branch(ctx).reverse().find(entry => entry.type === 'custom' && entry.customType === ENTRY)
+    return entry ? readCheckpoint(entry) : null
+  }
+  /** Command-only adoption: disk must have a proven checkpoint in this session.
+   * Parent decisions stay frozen; only exact current-branch receipts are replayed. */
+  async function resync(ctx: Context) {
+    const token = generation
+    return serialized(() => {
+      if (!context) context = ctx
+      if (generation !== token || !sameSession(ctx)) fail('session changed; resync discarded')
+      const previous = branchCheckpoint(ctx)
+      if (!previous || previous.checkpoint.snapshot.parentSessionId !== ctx.sessionManager.getSessionId()) fail('no owned checkpoint on this parent branch')
+      const { runId, parentSessionId } = previous.checkpoint.snapshot
+      const sessionFile = ctx.sessionManager.getSessionFile()
+      if (!sessionFile || !ctx.sessionManager.getEntries) fail('persistent session history required for resync')
+      const disk = createGraphDashboardStore({ directory: options.directory, runId, parentSessionId })
+      const persisted = disk.read()
+      if (!persisted) fail('persisted run unavailable')
+      const currentBranch = structuredClone(branch(ctx))
+      const leaf = ctx.sessionManager.getLeafId()
+      const entries = ctx.sessionManager.getEntries().map(record)
+      const byId = new Map<string, Record<string, unknown>>()
+      for (const entry of entries) {
+        if (typeof entry.id !== 'string' || byId.has(entry.id)) fail('ambiguous session entry identity')
+        byId.set(entry.id, entry)
+      }
+      const candidates = entries.filter(entry => entry.type === 'custom' && entry.customType === ENTRY && isDeepStrictEqual(record(entry.data).snapshot, persisted)).map(readCheckpoint)
+      if (!candidates.length) fail('no historical checkpoint matches persisted run')
+      const source = candidates.at(-1)!
+      if (candidates.some(value => !isDeepStrictEqual(value.checkpoint, source.checkpoint))) fail('ambiguous historical checkpoint metadata')
+      const ancestry: Record<string, unknown>[] = []
+      const seen = new Set<string>()
+      let id: unknown = source.id
+      while (id !== null) {
+        if (typeof id !== 'string' || seen.has(id) || !byId.has(id)) fail('broken historical checkpoint ancestry')
+        seen.add(id)
+        const entry = byId.get(id)!
+        ancestry.unshift(entry); id = entry.parentId
+      }
+      const common = [...currentBranch].reverse().find(entry => seen.has(String(entry.id)))
+      if (!common) fail('historical checkpoint has no common ancestor with this branch')
+      const saved = source.checkpoint
+      const launches = new Map<string, { entry: Record<string, unknown>; launch: LaunchOwnership }>()
+      for (const binding of saved.bindings) {
+        const entry = [...ancestry].reverse().find(entry => entry.type === 'custom' && entry.customType === LAUNCH_ENTRY && record(entry.data).toolCallId === binding.launchToolCallId && record(entry.data).runId === runId && record(entry.data).parentSessionId === parentSessionId)
+        if (!entry) fail('historical binding has no owned launch')
+        const value = record(entry.data)
+        exact(value, ['version', 'parentSessionId', 'runId', 'toolCallId', 'toolName', 'names'], ['receipt'])
+        if (value.version !== 1 || !['agent_spawn', 'agent_spawn_graph'].includes(String(value.toolName)) || !Array.isArray(value.names) || !value.names.length || value.names.length > 12 || new Set(value.names).size !== value.names.length || value.names.some(name => typeof name !== 'string' || !Object.values(saved.names).includes(name))) fail('malformed historical launch ownership')
+        const receipt = savedNativeReceipt(value.receipt)
+        if (receipt.agents.length !== value.names.length || value.names.some(name => !receipt.agents.some(agent => agent.name === name)) || !receipt.agents.some(agent => agent.id === binding.nativeId && agent.name === binding.name)) fail('historical launch identity mismatch')
+        const launch = structuredClone(value) as unknown as LaunchOwnership
+        launches.set(binding.launchToolCallId, { entry, launch })
+      }
+      const imports = [...launches.values()].filter(({ launch }) => {
+        const existing = currentBranch.filter(entry => entry.type === 'custom' && entry.customType === LAUNCH_ENTRY && record(entry.data).toolCallId === launch.toolCallId && record(entry.data).runId === runId)
+        for (const entry of existing) {
+          const { receipt: currentReceipt, ...currentOwner } = record(entry.data)
+          const { receipt: savedReceipt, ...savedOwner } = launch
+          if (!isDeepStrictEqual(currentOwner, savedOwner)) fail('conflicting current-branch launch ownership')
+          if (currentReceipt !== undefined) {
+            const identities = (receipt: Receipt) => receipt.agents.map(agent => [agent.id, agent.name]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+            if (!isDeepStrictEqual(identities(savedNativeReceipt(currentReceipt)), identities(savedReceipt!))) fail('conflicting current-branch launch ownership')
+          }
+        }
+        // Launch entries accumulate status receipts; only ownership and native identities must agree.
+        return !isDeepStrictEqual(existing.at(-1)?.data, launch)
+      })
+      const next = structuredClone(persisted)
+      const replayed: string[] = []
+      for (const entry of currentBranch) {
+        if (seen.has(String(entry.id))) continue
+        let observation: Receipt | null = null
+        try {
+          if (entry.type === 'message') observation = nativeObservation(entry.message)
+          else if (entry.type === 'custom' && entry.customType === OBSERVATION_ENTRY) {
+            const value = record(entry.data)
+            exact(value, ['version', 'parentSessionId', 'runId', 'launchToolCallId', 'receipt'])
+            if (value.version !== 1 || value.parentSessionId !== parentSessionId || value.runId !== runId || !launches.has(String(value.launchToolCallId))) continue
+            observation = savedNativeReceipt(value.receipt)
+          }
+        } catch { continue }
+        if (!observation) continue
+        let changed = false
+        for (const binding of saved.bindings) {
+          const node = next.nodes.find(node => node.id === binding.nodeId)!
+          const agent = observation.agents.find(agent => agent.id === binding.nativeId && agent.name === binding.name)
+          const launch = launches.get(binding.launchToolCallId)!.launch
+          if (!node.currentAttempt || !agent || observation.at < launch.receipt!.at) continue
+          const before = structuredClone(node.execution)
+          apply(node, agent, observation.at, next)
+          changed ||= !isDeepStrictEqual(before, node.execution)
+        }
+        if (changed) replayed.push(String(entry.id))
+      }
+      const pending = new Set(saved.bindings.filter(binding => next.nodes.some(node => node.id === binding.nodeId && node.currentAttempt)).map(binding => binding.nodeId))
+      next.reporting = { recovery: pending.size ? 'pending' : 'ready' }
+      next.revision = persisted.revision + 1
+      next.updatedAt = new Date(Math.max(Date.now(), Date.parse(persisted.updatedAt))).toISOString()
+      next.timestamps.observerHeartbeatAt = next.updatedAt
+      validateGraphSnapshot(next); validateCheckpointMetadata(next, saved.names, saved.bindings)
+      renderHtml(next)
+      // Back up bytes, not reserialized data. Session files can contain secrets.
+      const backupPath = mkdtempSync(join(options.directory, 'resync-backup-'))
+      const hashes: Record<string, string> = {}
+      const backup = (path: string, name: string, optional = false) => {
+        let fd: number
+        try { fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK) }
+        catch (error) { if (optional && (error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error }
+        let bytes: Buffer
+        try {
+          const stat = fstatSync(fd)
+          if (!stat.isFile() || stat.uid !== process.getuid?.()) fail('unsafe backup source')
+          bytes = readFileSync(fd)
+        } finally { closeSync(fd) }
+        const output = openSync(join(backupPath, name), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600)
+        try { writeFileSync(output, bytes); fsyncSync(output) } finally { closeSync(output) }
+        hashes[name] = createHash('sha256').update(bytes).digest('hex')
+      }
+      backup(sessionFile, 'session.jsonl')
+      backup(join(options.directory, `${runId}.json`), 'snapshot.json')
+      backup(join(options.directory, `${runId}.html`), 'report.html', true)
+      const audit = { version: 1, parentSessionId, runId, sourceCheckpointId: source.id, previousCheckpointId: previous.id, previousLeafId: leaf, commonAncestorId: common.id, revision: next.revision, importedLaunchEntryIds: imports.map(value => value.entry.id), replayedEntryIds: replayed, backupPath, hashes, parentDecisions: 'retained' }
+      const manifest = openSync(join(backupPath, 'manifest.json'), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600)
+      try { writeFileSync(manifest, JSON.stringify(audit, null, 2)); fsyncSync(manifest) } finally { closeSync(manifest) }
+      const backupDirectory = openSync(backupPath, constants.O_RDONLY | constants.O_NOFOLLOW)
+      try { fsyncSync(backupDirectory) } finally { closeSync(backupDirectory) }
+      ctx.ui.notify(`Private resync backup: ${backupPath}`, 'info')
+      const unchanged = () => {
+        if (generation !== token || !sameSession(ctx) || ctx.sessionManager.getLeafId() !== leaf || !isDeepStrictEqual(disk.read(), persisted)) fail('session or persisted run changed; retry resync')
+      }
+      unchanged()
+      writable = false
+      try {
+        for (const { launch } of imports) options.appendEntry(LAUNCH_ENTRY, launch)
+        options.appendEntry('agent-graph-dashboard:resync:v1', audit)
+        // Publish the intended checkpoint BEFORE disk. If a write fails, a retry
+        // can still find the old exact checkpoint; no revision rollback is needed.
+        const owner: Checkpoint = { ...saved, snapshot: next }
+        options.appendEntry(ENTRY, structuredClone(owner))
+        const newCheckpointId = ctx.sessionManager.getLeafId()
+        if (generation !== token || !sameSession(ctx) || !isDeepStrictEqual(disk.read(), persisted) || !isDeepStrictEqual(branchCheckpoint(ctx)?.checkpoint, owner)) fail('resync checkpoint changed before persistence')
+        owner.snapshot = disk.write(next)
+        active = owner; checkpointId = newCheckpointId
+        unreconciled.clear(); for (const nodeId of pending) unreconciled.add(nodeId)
+        let exported = false
+        try { exportHtml(next); exported = true } catch { report(ctx, 'HTML export failed; last valid report retained') }
+        if (exported) {
+          const rendered = structuredClone(next)
+          rendered.revision++; rendered.timestamps.lastHtmlRenderAt = rendered.updatedAt
+          const renderedOwner = { ...owner, snapshot: rendered }
+          options.appendEntry(ENTRY, structuredClone(renderedOwner))
+          if (generation !== token || !sameSession(ctx) || !isDeepStrictEqual(disk.read(), next) || !isDeepStrictEqual(branchCheckpoint(ctx)?.checkpoint, renderedOwner)) fail('resync export checkpoint changed before persistence')
+          active.snapshot = disk.write(rendered)
+          checkpointId = ctx.sessionManager.getLeafId()
+        }
+        writable = true
+        return { ...links(ctx), backupPath, sourceCheckpointId: source.id, replayedEntryIds: replayed }
+      } catch (error) {
+        writable = false
+        throw error
+      }
+    })
   }
   async function restore(ctx: Context) {
     const token = ++generation
@@ -691,5 +855,5 @@ export function createGraphDashboardRuntime(options: { directory: string; append
     previous?.ui.setStatus(STATUS, undefined)
     await stopServer()
   }
-  return { execute, observe, restore, close }
+  return { execute, observe, restore, resync, close }
 }

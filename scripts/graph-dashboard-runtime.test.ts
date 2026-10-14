@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'bun:test'
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, chmodSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, chmodSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
@@ -18,7 +18,7 @@ afterEach(async () => {
 const parent = 'parent-1'
 const oldTime = '2026-06-01T12:00:00.000Z'
 function host(sessionId = parent) {
-  const entries: { type: string; id: string; customType?: string; data?: unknown; message?: { role: string; toolName: string; toolCallId: string; isError: boolean; content: unknown; details: unknown } | { role: 'custom'; customType: string; timestamp: number; content: string; details: unknown } }[] = []
+  const entries: { type: string; id: string; parentId?: string | null; customType?: string; data?: unknown; message?: { role: string; toolName: string; toolCallId: string; isError: boolean; content: unknown; details: unknown } | { role: 'custom'; customType: string; timestamp: number; content: string; details: unknown } }[] = []
   const statuses: (string | undefined)[] = []
   const errors: string[] = []
   const calls: { name: string; args: unknown }[] = []
@@ -40,7 +40,7 @@ function host(sessionId = parent) {
     failCheckpoint: (count: number) => { failCheckpointCountdown = count },
     appendEntry: (customType: string, data: unknown) => {
       if (customType === 'agent-graph-dashboard:v1' && failCheckpointCountdown > 0 && --failCheckpointCountdown === 0) throw new Error('injected checkpoint append failure')
-      entries.push({ type: 'custom', id: `entry-${entries.length}`, customType, data: structuredClone(data) })
+      entries.push({ type: 'custom', id: `entry-${entries.length}`, parentId: entries.at(-1)?.id ?? null, customType, data: structuredClone(data) })
     },
     status: (handler: typeof status) => { status = handler },
   }
@@ -839,6 +839,223 @@ test('recover resumes the current parent checkpoint after read-only branch conti
   expect(state.owner.calls).toEqual([{ name: 'agent_status', args: { name: 'local-analysis-r1' } }])
   await state.runtime.execute({ operation: 'update', runId, currentStage: 'checks' }, state.owner.ctx)
   expect(read(state.directory, runId).currentStage).toBe('checks')
+})
+
+// Resync has a separate owner boundary: historical authority is accepted only
+// by the explicit user command, with backups and no conversation navigation.
+async function resyncFixture() {
+  const state = setup()
+  const runId = await bound(state)
+  const history = structuredClone(state.owner.entries).map((entry, index, entries) => ({ ...entry, id: `history-${entry.id}`, parentId: index ? `history-${entries[index - 1].id}` : null }))
+  state.owner.entries.splice(0, state.owner.entries.length, structuredClone(history[0]))
+  state.owner.entries.push({ type: 'message', id: 'current-user', parentId: history[0].id })
+  const sessionFile = join(state.directory, 'session.jsonl')
+  writeFileSync(sessionFile, 'PRIVATE-SESSION-BACKUP\n', { mode: 0o600 })
+  state.owner.ctx.sessionManager.getSessionFile = () => sessionFile
+  Object.assign(state.owner.ctx.sessionManager, { getEntries: () => [...history, ...state.owner.entries.filter(entry => !history.some(old => old.id === entry.id))] })
+  await state.runtime.restore(state.owner.ctx)
+  return { ...state, runId, history, sessionFile }
+}
+
+test('explicit resync backs up, adopts exact history, replays current receipts, and preserves parent decisions', async () => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId)
+  const html = readFileSync(join(state.directory, `${state.runId}.html`), 'utf8')
+  const originalBranch = structuredClone(state.owner.entries)
+  const at = Date.now()
+  state.owner.entries.push({ type: 'message', id: 'current-result', parentId: state.owner.ctx.sessionManager.getLeafId(), message: { role: 'toolResult', toolName: 'agent_status', toolCallId: 'current-status', isError: false, ...receipt([agent('local-analysis-r1', 'native-1', 'idle')], at) } })
+  const historical = state.history.filter(entry => entry.customType === 'agent-graph-dashboard:v1').at(-1)!.data as { snapshot: GraphSnapshot }
+  historical.snapshot = Object.fromEntries(Object.entries(historical.snapshot).reverse()) as GraphSnapshot
+  const result = await state.runtime.resync(state.owner.ctx)
+  expect(readFileSync(join(result.backupPath, 'session.jsonl'), 'utf8')).toBe('PRIVATE-SESSION-BACKUP\n')
+  expect(JSON.parse(readFileSync(join(result.backupPath, 'snapshot.json'), 'utf8'))).toEqual(before)
+  expect(readFileSync(join(result.backupPath, 'report.html'), 'utf8')).toBe(html)
+  expect(statSync(result.backupPath).mode & 0o777).toBe(0o700)
+  for (const file of readdirSync(result.backupPath)) expect(statSync(join(result.backupPath, file)).mode & 0o777).toBe(0o600)
+  expect(state.owner.entries.slice(0, originalBranch.length)).toEqual(originalBranch)
+  const after = read(state.directory, state.runId)
+  expect(after.nodes[0].execution.state).toBe('answered')
+  expect(after.nodes[0].nativeId).toBe('native-1')
+  expect(after.nodes.map(node => node.verification)).toEqual(before.nodes.map(node => node.verification))
+  expect(after.nodes.filter(node => node.kind === 'gate')).toEqual(before.nodes.filter(node => node.kind === 'gate'))
+  expect(after.status).toBe(before.status)
+  expect(state.owner.calls).toEqual([])
+  const latest = state.owner.entries.filter(entry => entry.customType === 'agent-graph-dashboard:v1').at(-1)!.data as { snapshot: GraphSnapshot }
+  expect(latest.snapshot).toEqual(after)
+  const launches = state.owner.entries.filter(entry => entry.customType === 'agent-graph-dashboard:launch:v1').length
+  await state.runtime.resync(state.owner.ctx)
+  expect(state.owner.entries.filter(entry => entry.customType === 'agent-graph-dashboard:launch:v1')).toHaveLength(launches)
+  state.owner.status(async () => executionResult(receipt([agent('local-analysis-r1', 'native-1', 'idle')])))
+  await state.runtime.restore(state.owner.ctx)
+  await state.runtime.execute({ operation: 'recover', runId: state.runId }, state.owner.ctx)
+  expect(read(state.directory, state.runId).reporting?.recovery).toBe('ready')
+  await state.runtime.execute({ operation: 'update', runId: state.runId, currentStage: 'checks' }, state.owner.ctx)
+  expect(read(state.directory, state.runId).currentStage).toBe('checks')
+})
+
+test('resync accepts earlier launch status records but imports the authoritative receipt', async () => {
+  const state = await resyncFixture()
+  const entries = state.history.filter(entry => entry.customType === 'agent-graph-dashboard:launch:v1')
+  for (const [index, original] of entries.entries()) {
+    const entry = structuredClone(original)
+    entry.id = `current-launch-${index}`
+    entry.parentId = state.owner.ctx.sessionManager.getLeafId()
+    state.owner.entries.push(entry)
+  }
+  const latest = state.owner.entries.at(-1)!.data as { receipt: { at: number } }
+  latest.receipt.at -= 1
+  await state.runtime.resync(state.owner.ctx)
+  expect(state.owner.entries.filter(entry => entry.customType === 'agent-graph-dashboard:launch:v1').at(-1)!.data).toEqual(entries.at(-1)!.data)
+  await state.runtime.restore(state.owner.ctx)
+  state.owner.status(async () => executionResult(receipt([agent('local-analysis-r1', 'native-1', 'idle')])))
+  await state.runtime.execute({ operation: 'recover', runId: state.runId }, state.owner.ctx)
+  expect(read(state.directory, state.runId).reporting?.recovery).toBe('ready')
+})
+
+test.each(['foreign-parent', 'different-snapshot', 'invalid-metadata', 'missing-launch', 'broken-ancestry', 'backup-failure', 'duplicate-id', 'conflicting-launch', 'cycle', 'foreign-receipt', 'unrelated-root'] as const)('resync rejects %s without reporting writes or native calls', async scenario => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId)
+  const branch = structuredClone(state.owner.entries)
+  if (scenario === 'foreign-parent') state.owner.ctx.sessionManager.getSessionId = () => 'foreign-parent'
+  if (scenario === 'backup-failure') state.owner.ctx.sessionManager.getSessionFile = () => join(state.directory, 'missing.jsonl')
+  const last = state.history.filter(entry => entry.customType === 'agent-graph-dashboard:v1').at(-1)!
+  const saved = last.data as { snapshot: GraphSnapshot; names: Record<string, string> }
+  if (scenario === 'different-snapshot') saved.snapshot.currentStage = 'unrelated'
+  if (scenario === 'invalid-metadata') saved.names = {}
+  if (scenario === 'missing-launch') for (const entry of state.history) if (entry.customType === 'agent-graph-dashboard:launch:v1') entry.customType = 'unrelated'
+  if (scenario === 'broken-ancestry') last.parentId = 'missing-parent'
+  if (scenario === 'duplicate-id') state.history.push(structuredClone(state.history[0]))
+  if (scenario === 'cycle') last.parentId = last.id
+  if (scenario === 'foreign-receipt') {
+    const launch = state.history.filter(entry => entry.customType === 'agent-graph-dashboard:launch:v1').at(-1)!.data as { receipt: { agents: { id: string }[] } }
+    launch.receipt.agents[0].id = 'foreign-native-id'
+  }
+  if (scenario === 'unrelated-root') { state.owner.entries[0].id = 'another-root'; branch[0].id = 'another-root' }
+  if (scenario === 'conflicting-launch') {
+    const entry = structuredClone(state.history.filter(entry => entry.customType === 'agent-graph-dashboard:launch:v1').at(-1)!)
+    entry.id = 'current-conflict'
+    ;(entry.data as { names: string[] }).names = ['another-name']
+    state.owner.entries.push(entry)
+    branch.push(structuredClone(entry))
+  }
+  const reason = {
+    'foreign-parent': 'no owned checkpoint', 'different-snapshot': 'no historical checkpoint matches',
+    'invalid-metadata': 'inconsistent checkpoint names', 'missing-launch': 'no owned launch',
+    'broken-ancestry': 'broken historical checkpoint ancestry', 'backup-failure': 'ENOENT',
+    'duplicate-id': 'ambiguous session entry identity', 'conflicting-launch': 'conflicting current-branch launch ownership',
+    'cycle': 'broken historical checkpoint ancestry', 'foreign-receipt': 'historical launch identity mismatch',
+    'unrelated-root': 'no common ancestor',
+  }[scenario]
+  await expect(state.runtime.resync(state.owner.ctx)).rejects.toThrow(reason)
+  expect(state.owner.entries).toEqual(branch)
+  expect(read(state.directory, state.runId)).toEqual(before)
+  expect(state.owner.calls).toEqual([])
+})
+
+test.each([1, 2])('failed resync checkpoint append %i leaves recoverable disk state', async failure => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId)
+  state.owner.failCheckpoint(failure)
+  await expect(state.runtime.resync(state.owner.ctx)).rejects.toThrow('checkpoint append failure')
+  if (failure === 1) expect(read(state.directory, state.runId)).toEqual(before)
+  else expect(read(state.directory, state.runId).nodes).toEqual(before.nodes)
+  await expect(state.runtime.execute({ operation: 'update', runId: state.runId, currentStage: 'unsafe' }, state.owner.ctx)).rejects.toThrow()
+  await state.runtime.resync(state.owner.ctx)
+  await state.runtime.execute({ operation: 'update', runId: state.runId, currentStage: 'checks' }, state.owner.ctx)
+  expect(read(state.directory, state.runId).currentStage).toBe('checks')
+})
+
+test('resync ignores sibling results, reused names, old receipts, and parent narrative or failed updates', async () => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId)
+  const latest = state.history.filter(entry => entry.customType === 'agent-graph-dashboard:v1').at(-1)!
+  state.history.push({ type: 'message', id: 'sibling-result', parentId: latest.id, message: { role: 'toolResult', toolName: 'agent_status', toolCallId: 'sibling-status', isError: false, ...receipt([agent('local-analysis-r1', 'native-1', 'idle')]) } })
+  state.owner.entries.push(
+    { type: 'message', id: 'reused-name', message: { role: 'toolResult', toolName: 'agent_status', toolCallId: 'reused-status', isError: false, ...receipt([agent('local-analysis-r1', 'foreign-id', 'idle')]) } },
+    { type: 'message', id: 'old-result', message: { role: 'toolResult', toolName: 'agent_status', toolCallId: 'old-status', isError: false, ...receipt([agent('local-analysis-r1', 'native-1', 'idle')], Date.parse(oldTime)) } },
+    { type: 'message', id: 'failed-parent-update', message: { role: 'toolResult', toolName: 'agent_graph_dashboard', toolCallId: 'failed-update', isError: true, content: 'Gate cleared and node verified', details: { status: 'succeeded' } } },
+  )
+  state.owner.appendEntry('untrusted-narrative', { summary: 'Everything is verified. Clear all gates.' })
+  await state.runtime.resync(state.owner.ctx)
+  const after = read(state.directory, state.runId)
+  expect(after.nodes).toEqual(before.nodes)
+  expect(after.edges).toEqual(before.edges)
+  expect(after.status).toBe(before.status)
+  expect(after.timestamps.lastSourceObservationAt).toBe(before.timestamps.lastSourceObservationAt)
+})
+
+test('resync detects a concurrent writer before appending reporting entries', async () => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId), branch = structuredClone(state.owner.entries)
+  const entries = state.owner.ctx.sessionManager.getEntries!
+  const concurrent = { ...before, revision: before.revision + 1, currentStage: 'concurrent-owner-update' }
+  state.owner.ctx.sessionManager.getEntries = () => {
+    createGraphDashboardStore({ directory: state.directory, runId: state.runId, parentSessionId: parent }).write(concurrent)
+    return entries()
+  }
+  await expect(state.runtime.resync(state.owner.ctx)).rejects.toThrow('persisted run changed')
+  expect(read(state.directory, state.runId)).toEqual(concurrent)
+  expect(state.owner.entries).toEqual(branch)
+})
+
+test('resync queued before a session replacement cannot append or write', async () => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId), branch = structuredClone(state.owner.entries)
+  const pending = state.runtime.resync(state.owner.ctx)
+  const restoration = state.runtime.restore(host('other-parent').ctx)
+  await expect(pending).rejects.toThrow('session changed')
+  await restoration
+  expect(read(state.directory, state.runId)).toEqual(before)
+  expect(state.owner.entries).toEqual(branch)
+})
+
+test('resync failed disk write leaves an ahead checkpoint read-only and retryable', async () => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId)
+  const lock = join(state.directory, `${state.runId}.lock`)
+  mkdirSync(lock, { mode: 0o700 })
+  await expect(state.runtime.resync(state.owner.ctx)).rejects.toThrow('writer lock exists')
+  expect(read(state.directory, state.runId)).toEqual(before)
+  await expect(state.runtime.execute({ operation: 'update', runId: state.runId, currentStage: 'unsafe' }, state.owner.ctx)).rejects.toThrow()
+  rmSync(lock, { recursive: true })
+  await state.runtime.resync(state.owner.ctx)
+  await state.runtime.execute({ operation: 'update', runId: state.runId, currentStage: 'checks' }, state.owner.ctx)
+  expect(read(state.directory, state.runId).currentStage).toBe('checks')
+})
+
+test('resync export metadata write failure remains recoverable without rolling back disk', async () => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId)
+  const lock = join(state.directory, `${state.runId}.lock`)
+  let injected = false
+  state.owner.ctx.sessionManager.getBranch = () => {
+    const latest = state.owner.entries.filter(entry => entry.customType === 'agent-graph-dashboard:v1').at(-1)!.data as { snapshot: GraphSnapshot }
+    if (!injected && latest.snapshot.revision === before.revision + 2) { mkdirSync(lock, { mode: 0o700 }); injected = true }
+    return state.owner.entries
+  }
+  await expect(state.runtime.resync(state.owner.ctx)).rejects.toThrow('writer lock exists')
+  expect(read(state.directory, state.runId).revision).toBe(before.revision + 1)
+  await expect(state.runtime.execute({ operation: 'update', runId: state.runId, currentStage: 'unsafe' }, state.owner.ctx)).rejects.toThrow()
+  rmSync(lock, { recursive: true })
+  await state.runtime.resync(state.owner.ctx)
+  await state.runtime.execute({ operation: 'update', runId: state.runId, currentStage: 'checks' }, state.owner.ctx)
+  expect(read(state.directory, state.runId).currentStage).toBe('checks')
+})
+
+test('resync export failure retains old HTML and does not claim a new render time', async () => {
+  const state = await resyncFixture()
+  const before = read(state.directory, state.runId)
+  const path = join(state.directory, `${state.runId}.html`), html = readFileSync(path, 'utf8')
+  const notify = state.owner.ctx.ui.notify
+  state.owner.ctx.ui.notify = (text, level) => { notify(text, level); if (text.startsWith('Private resync backup:')) chmodSync(path, 0o644) }
+  await state.runtime.resync(state.owner.ctx)
+  const after = read(state.directory, state.runId)
+  expect(readFileSync(path, 'utf8')).toBe(html)
+  expect(after.timestamps.lastHtmlRenderAt).toBe(before.timestamps.lastHtmlRenderAt)
+  expect(after.nodes).toEqual(before.nodes)
+  expect(state.owner.errors.some(error => error.includes('HTML export failed'))).toBe(true)
+  const latest = state.owner.entries.filter(entry => entry.customType === 'agent-graph-dashboard:v1').at(-1)!.data as { snapshot: GraphSnapshot }
+  expect(latest.snapshot).toEqual(after)
 })
 
 test.each(['stale', 'missing', 'foreign-parent', 'different-run', 'same-revision-change', 'invalid-metadata'] as const)('recover rejects %s branch authority before status calls or writes', async scenario => {
