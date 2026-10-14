@@ -17,10 +17,11 @@ export interface GraphDashboardServerOptions {
   store: GraphDashboardStore
   renderer?: GraphDashboardRenderer
   port?: number
+  allowedHosts?: string[]
 }
 
 /** No CLI or runtime adapter is installed here. The parent supplies its renderer at startup. */
-export function createGraphDashboardServer({ store, renderer, port = 0 }: GraphDashboardServerOptions) {
+export function createGraphDashboardServer({ store, renderer, port = 0, allowedHosts = (process.env.PI_GRAPH_DASHBOARD_ALLOWED_HOSTS ?? '').split(',').filter(Boolean) }: GraphDashboardServerOptions) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Graph dashboard: invalid port')
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(store.runId)) throw new Error('Graph dashboard: invalid run identifier')
   const snapshotPath = `/runs/${store.runId}/snapshot`
@@ -46,8 +47,10 @@ export function createGraphDashboardServer({ store, renderer, port = 0 }: GraphD
         return json({ error: { code, message } }, status, extra)
       }
       try {
-        const port = /^127\.0\.0\.1:([1-9]\d{0,4})$/.exec(authority)?.[1]
-        if (!port || Number(port) > 65535) return error('FORBIDDEN', 'Untrusted request origin', 403)
+        const match = /^([a-zA-Z0-9.-]+):([1-9]\d{0,4})$/.exec(authority)
+        if (!match || Number(match[2]) > 65535 || !['127.0.0.1', 'localhost', ...allowedHosts].includes(match[1])) {
+          return error('FORBIDDEN', 'Untrusted request origin', 403)
+        }
         const url = new URL(request.url)
         const suppliedOrigin = request.headers.get('origin')
         const site = request.headers.get('sec-fetch-site')

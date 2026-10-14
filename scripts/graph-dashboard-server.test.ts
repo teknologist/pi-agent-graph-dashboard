@@ -183,10 +183,10 @@ test('unsafe permissions, symlink snapshots, and malformed disk data fail closed
   chmodSync(options.directory, 0o755)
   expect(() => createGraphDashboardStore(options)).toThrow()
 })
-function serve() {
+function serve(allowedHosts: string[] = []) {
   const state = setup()
   state.store.write(fixture())
-  const server = createGraphDashboardServer({ store: state.store, port: 0, renderer: (snapshot, context) =>
+  const server = createGraphDashboardServer({ store: state.store, port: 0, allowedHosts, renderer: (snapshot, context) =>
     `<!doctype html><title>${snapshot.runId}</title><p>${context.snapshotPath}</p>` })
   servers.push(server)
   return { ...state, server, base: `http://127.0.0.1:${server.port}` }
@@ -233,6 +233,21 @@ test('SSH forwarding accepts a different loopback port but rejects mismatched or
   expect((await fetch(`${base}/health`, { headers: { Host: host, 'Sec-Fetch-Site': 'none' } })).status).toBe(200)
   expect((await fetch(`${base}/health`, { headers: { ...headers, Origin: base } })).status).toBe(403)
   expect((await fetch(`${base}/health`, { headers: { ...headers, 'Sec-Fetch-Site': 'cross-site' } })).status).toBe(403)
+})
+test('localhost forwarding and explicit host allowlists retain same-origin protection', async () => {
+  const { base } = serve(['dashboard.example'])
+  for (const host of ['localhost:52356', 'dashboard.example:52356']) {
+    const headers = { Host: host, Origin: `http://${host}`, 'Sec-Fetch-Site': 'same-origin' }
+    expect((await fetch(`${base}/runs/run-1/report`, { headers })).status).toBe(200)
+    expect((await fetch(`${base}/runs/run-1/snapshot`, { headers })).status).toBe(200)
+    expect((await fetch(`${base}/health`, { headers: { ...headers, Origin: base } })).status).toBe(403)
+    expect((await fetch(`${base}/health`, { headers: { ...headers, 'Sec-Fetch-Site': 'cross-site' } })).status).toBe(403)
+  }
+  for (const host of ['evil.example:52356', 'localhost.evil.example:52356', 'localhost:65536']) {
+    expect((await fetch(`${base}/health`, { headers: { Host: host } })).status).toBe(403)
+  }
+  const defaults = serve()
+  expect((await fetch(`${defaults.base}/health`, { headers: { Host: 'dashboard.example:52356' } })).status).toBe(403)
 })
 test('the server works without a renderer and does not publish an absent run', async () => {
   const { store } = setup()

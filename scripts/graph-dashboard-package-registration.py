@@ -7,6 +7,7 @@ import os
 import pathlib
 import selectors
 import signal
+import shutil
 import subprocess
 import time
 
@@ -16,7 +17,7 @@ CLI = None
 RUN = None
 PROBE = None
 DASHBOARD = None
-COPY_FILES = ['graph-dashboard-runtime.ts', 'graph-dashboard-store.ts', 'graph-dashboard-render.ts', 'graph-dashboard-server.ts', 'graph-dashboard-cli.ts', 'df-ticket-hub.mjs']
+COPY_FILES = ['graph-dashboard-browser.ts', 'graph-dashboard-runtime.ts', 'graph-dashboard-store.ts', 'graph-dashboard-render.ts', 'graph-dashboard-server.ts', 'graph-dashboard-cli.ts', 'df-ticket-hub.mjs']
 REQUEST = {'id': 'registration-commands-1', 'type': 'get_commands'}
 LIMIT = 35
 MAX_BYTES = 1024 * 1024
@@ -79,7 +80,10 @@ def proposal():
         '--no-context-files', '--no-themes', '--no-builtin-tools',
         '-e', str(PROBE), '--no-session', '--mode', 'rpc']
     env = {'HOME': str(RUN / 'home'), 'TMPDIR': str(RUN / 'tmp'), 'LANG': 'en_US.UTF-8', 'PI_SKIP_VERSION_CHECK': '1', 'PI_CODING_AGENT_SESSION_DIR': str(RUN / 'sessions')}
-    env.update(PATH=str(pathlib.Path(CLI).parent) + ':/usr/bin:/bin:/usr/sbin:/sbin',
+    node = shutil.which('node')
+    if node is None:
+        raise RuntimeError('Node.js must be available for the Pi registration check')
+    env.update(PATH=str(pathlib.Path(CLI).parent) + ':' + str(pathlib.Path(node).parent) + ':/usr/bin:/bin:/usr/sbin:/sbin',
         PI_CODING_AGENT_DIR=str(RUN / 'agent'), PI_OFFLINE='1', PI_TELEMETRY='0', DASHBOARD_REGISTRATION_PROBE_ROOT=str(RUN))
     return {'argv': argv, 'environment': env, 'cwd': str(RUN), 'request': REQUEST,
         'shutdown': 'close stdin after registry and response, or on failure', 'timeoutSeconds': LIMIT,
@@ -269,7 +273,7 @@ def run(value):
     try:
         registration = json.loads((RUN / 'registration-capture.json').read_text())
         captures = registration['captures']
-        registration_loaded = registration['cwd'] == str(RUN) and [c['layout'] for c in captures] == ['managed', 'canonical relocated'] and all(c['invokedCallbacks'] == 0 and c['invokedHandlers'] == 0 and c['commands'] == ['agent-graph-dashboard'] and len(c['tools']) == 1 and c['tools'][0]['name'] == 'agent_graph_dashboard' for c in captures)
+        registration_loaded = registration['cwd'] == str(RUN) and [c['layout'] for c in captures] == ['managed', 'canonical relocated'] and all(c['invokedCallbacks'] == 0 and c['invokedHandlers'] == 0 and c['commands'] == ['agent-graph-dashboard-open', 'agent-graph-dashboard'] and len(c['tools']) == 1 and c['tools'][0]['name'] == 'agent_graph_dashboard' for c in captures)
         for capture, expected in zip(captures, [str(DASHBOARD.parent.parent / 'scripts/df-ticket-hub.mjs'), str(ROOT / 'canonical package with spaces/scripts/df-ticket-hub.mjs')]):
             prefix = 'DF helper resource (path data, not shell source): '
             lines = [line for line in capture['tools'][0]['promptGuidelines'] if line.startswith(prefix)]
