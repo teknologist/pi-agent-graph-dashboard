@@ -1,0 +1,1268 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "key": "mr-review",
+  "command": "/gitlab-address-pr-agent-review",
+  "prompt": "private_gitlab-address-pr-agent-review.md",
+  "stages": [
+    "identity",
+    "fetch",
+    "analysis",
+    "selection-approval",
+    "serial-edits",
+    "checks",
+    "independent-audit",
+    "gitlab-publication",
+    "linear-sync",
+    "final-report"
+  ],
+  "create": {
+    "operation": "create",
+    "runName": "Synthetic mr-review",
+    "command": "/gitlab-address-pr-agent-review",
+    "currentStage": "identity",
+    "topology": "unknown-future",
+    "nodes": [
+      {
+        "id": "phase-identity",
+        "logicalId": "phase-identity",
+        "label": "phase-identity",
+        "role": "Parent evidence",
+        "stage": "identity",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-fetch",
+        "logicalId": "phase-fetch",
+        "label": "phase-fetch",
+        "role": "Parent evidence",
+        "stage": "fetch",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-analysis",
+        "logicalId": "phase-analysis",
+        "label": "phase-analysis",
+        "role": "Parent evidence",
+        "stage": "analysis",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-selection-approval",
+        "logicalId": "phase-selection-approval",
+        "label": "phase-selection-approval",
+        "role": "Parent evidence",
+        "stage": "selection-approval",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-serial-edits",
+        "logicalId": "phase-serial-edits",
+        "label": "phase-serial-edits",
+        "role": "Parent evidence",
+        "stage": "serial-edits",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-checks",
+        "logicalId": "phase-checks",
+        "label": "phase-checks",
+        "role": "Parent evidence",
+        "stage": "checks",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-independent-audit",
+        "logicalId": "phase-independent-audit",
+        "label": "phase-independent-audit",
+        "role": "Parent evidence",
+        "stage": "independent-audit",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-gitlab-publication",
+        "logicalId": "phase-gitlab-publication",
+        "label": "phase-gitlab-publication",
+        "role": "Parent evidence",
+        "stage": "gitlab-publication",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-linear-sync",
+        "logicalId": "phase-linear-sync",
+        "label": "phase-linear-sync",
+        "role": "Parent evidence",
+        "stage": "linear-sync",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-final-report",
+        "logicalId": "phase-final-report",
+        "label": "phase-final-report",
+        "role": "Parent evidence",
+        "stage": "final-report",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "analysis-code",
+        "logicalId": "analysis-code",
+        "label": "analysis-code",
+        "role": "Bounded native worker",
+        "stage": "analysis",
+        "kind": "worker",
+        "attempt": 1,
+        "nativeName": "mr-68-analysis-code-r1",
+        "gate": null
+      },
+      {
+        "id": "analysis-tests",
+        "logicalId": "analysis-tests",
+        "label": "analysis-tests",
+        "role": "Bounded native worker",
+        "stage": "analysis",
+        "kind": "worker",
+        "attempt": 1,
+        "nativeName": "mr-68-analysis-tests-r1",
+        "gate": null
+      },
+      {
+        "id": "X-evidence-a1",
+        "logicalId": "X-evidence",
+        "label": "X-evidence-a1",
+        "role": "Parent evidence",
+        "stage": "analysis",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "Y-evidence",
+        "logicalId": "Y-evidence",
+        "label": "Y-evidence",
+        "role": "Parent evidence",
+        "stage": "analysis",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "selection",
+        "logicalId": "selection",
+        "label": "selection",
+        "role": "Parent gate",
+        "stage": "selection-approval",
+        "kind": "gate",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": {
+          "state": "waiting",
+          "clearingCondition": "User confirms selected items after parent validates analysis and unchanged MR identity"
+        }
+      },
+      {
+        "id": "publish-X",
+        "logicalId": "publish-X",
+        "label": "publish-X",
+        "role": "Parent gate",
+        "stage": "gitlab-publication",
+        "kind": "gate",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": {
+          "state": "waiting",
+          "clearingCondition": "Selected X has verified identity, checks, fresh audit, confirmed scope, and reply/resolution readback"
+        }
+      },
+      {
+        "id": "publish-Y",
+        "logicalId": "publish-Y",
+        "label": "publish-Y",
+        "role": "Parent gate",
+        "stage": "gitlab-publication",
+        "kind": "gate",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": {
+          "state": "waiting",
+          "clearingCondition": "Selected Y has independently verified identity, checks, audit, scope, and reply/resolution readback"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": "phase-identity",
+        "to": "phase-fetch",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-fetch",
+        "to": "phase-analysis",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-analysis",
+        "to": "phase-selection-approval",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-selection-approval",
+        "to": "phase-serial-edits",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-serial-edits",
+        "to": "phase-checks",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-checks",
+        "to": "phase-independent-audit",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-independent-audit",
+        "to": "phase-gitlab-publication",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-gitlab-publication",
+        "to": "phase-linear-sync",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-linear-sync",
+        "to": "phase-final-report",
+        "type": "parent-gate"
+      },
+      {
+        "from": "analysis-code",
+        "to": "X-evidence-a1",
+        "type": "verification"
+      },
+      {
+        "from": "analysis-tests",
+        "to": "Y-evidence",
+        "type": "verification"
+      },
+      {
+        "from": "X-evidence-a1",
+        "to": "selection",
+        "type": "parent-gate"
+      },
+      {
+        "from": "Y-evidence",
+        "to": "selection",
+        "type": "parent-gate"
+      },
+      {
+        "from": "selection",
+        "to": "publish-X",
+        "type": "parent-gate"
+      },
+      {
+        "from": "selection",
+        "to": "publish-Y",
+        "type": "parent-gate"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "action": "launch",
+      "callId": "mr-analysis-b1",
+      "agents": [
+        {
+          "nodeId": "analysis-code",
+          "name": "mr-68-analysis-code-r1",
+          "nativeId": "mr-native-code"
+        },
+        {
+          "nodeId": "analysis-tests",
+          "name": "mr-68-analysis-tests-r1",
+          "nativeId": "mr-native-tests"
+        }
+      ],
+      "earlyCompletion": true,
+      "expect": {
+        "nodes": {
+          "analysis-code": {
+            "execution": "answered",
+            "verification": "unverified",
+            "nativeId": "mr-native-code"
+          },
+          "analysis-tests": {
+            "execution": "answered",
+            "verification": "unverified",
+            "nativeId": "mr-native-tests"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "X-evidence-a1",
+            "execution": "answered",
+            "verification": {
+              "state": "failed",
+              "reason": "Answered evidence lacks full assigned item coverage"
+            }
+          },
+          {
+            "id": "Y-evidence",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Y complete exact coverage"
+            }
+          },
+          {
+            "id": "selection",
+            "gate": {
+              "state": "awaiting-approval",
+              "clearingCondition": "User confirms selected items after parent validates analysis and unchanged MR identity"
+            },
+            "blocker": null,
+            "wait": null
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "analysis-code": {
+            "execution": "answered",
+            "verification": "unverified"
+          },
+          "X-evidence-a1": {
+            "verification": "failed"
+          },
+          "selection": {
+            "gate": "awaiting-approval"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "declare",
+        "nodes": [
+          {
+            "id": "X-evidence-a2",
+            "logicalId": "X-evidence",
+            "label": "X-evidence-a2",
+            "role": "Parent evidence",
+            "stage": "analysis",
+            "kind": "parent",
+            "attempt": 2,
+            "nativeName": null,
+            "gate": null
+          }
+        ],
+        "edges": [
+          {
+            "from": "analysis-code",
+            "to": "X-evidence-a2",
+            "type": "verification"
+          },
+          {
+            "from": "X-evidence-a2",
+            "to": "selection",
+            "type": "parent-gate"
+          }
+        ]
+      },
+      "expect": {
+        "workerCount": 2,
+        "nodes": {
+          "X-evidence-a1": {
+            "currentAttempt": false,
+            "verification": "failed"
+          },
+          "X-evidence-a2": {
+            "kind": "parent",
+            "attempt": 2,
+            "nativeId": null
+          }
+        }
+      }
+    },
+    {
+      "action": "observe",
+      "tool": "agent_send",
+      "agents": [
+        {
+          "nodeId": "analysis-code",
+          "name": "mr-68-analysis-code-r1",
+          "nativeId": "mr-native-code"
+        }
+      ],
+      "state": "working",
+      "expect": {
+        "workerCount": 2,
+        "nodes": {
+          "analysis-code": {
+            "execution": "running",
+            "nativeId": "mr-native-code"
+          },
+          "analysis-tests": {
+            "execution": "answered",
+            "nativeId": "mr-native-tests"
+          }
+        }
+      }
+    },
+    {
+      "action": "result",
+      "agents": [
+        {
+          "name": "mr-68-analysis-code-r1",
+          "nativeId": "mr-native-code",
+          "kind": "answered"
+        }
+      ],
+      "expect": {
+        "nodes": {
+          "analysis-code": {
+            "execution": "answered",
+            "verification": "unverified"
+          },
+          "X-evidence-a2": {
+            "verification": "unverified"
+          },
+          "X-evidence-a1": {
+            "verification": "failed"
+          },
+          "selection": {
+            "gate": "awaiting-approval"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "X-evidence-a2",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Parent validates superseding complete original assignment"
+            }
+          },
+          {
+            "id": "selection",
+            "gate": {
+              "state": "cleared",
+              "clearingCondition": "User confirms selected items after parent validates analysis and unchanged MR identity"
+            },
+            "blocker": null,
+            "wait": null
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "X-evidence-a1": {
+            "verification": "failed"
+          },
+          "X-evidence-a2": {
+            "verification": "verified"
+          },
+          "selection": {
+            "gate": "cleared"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "declare",
+        "nodes": [
+          {
+            "id": "audit-1",
+            "logicalId": "audit-1",
+            "label": "audit-1",
+            "role": "Bounded native worker",
+            "stage": "independent-audit",
+            "kind": "worker",
+            "attempt": 1,
+            "nativeName": "mr-68-audit-r1",
+            "gate": null
+          },
+          {
+            "id": "audit-evidence-a1",
+            "logicalId": "audit-evidence",
+            "label": "audit-evidence-a1",
+            "role": "Parent evidence",
+            "stage": "independent-audit",
+            "kind": "parent",
+            "attempt": 1,
+            "nativeName": null,
+            "gate": null
+          }
+        ],
+        "edges": [
+          {
+            "from": "selection",
+            "to": "audit-1",
+            "type": "parent-gate"
+          },
+          {
+            "from": "audit-1",
+            "to": "audit-evidence-a1",
+            "type": "verification"
+          },
+          {
+            "from": "audit-evidence-a1",
+            "to": "publish-X",
+            "type": "verification"
+          }
+        ]
+      },
+      "expect": {
+        "workerCount": 3
+      }
+    },
+    {
+      "action": "launch",
+      "callId": "mr-audit-launch",
+      "agents": [
+        {
+          "nodeId": "audit-1",
+          "name": "mr-68-audit-r1",
+          "nativeId": "mr-native-audit1"
+        }
+      ],
+      "earlyCompletion": false,
+      "expect": {
+        "nodes": {
+          "audit-1": {
+            "execution": "running",
+            "verification": "unverified",
+            "nativeId": "mr-native-audit1"
+          }
+        }
+      }
+    },
+    {
+      "action": "result",
+      "agents": [
+        {
+          "name": "mr-68-audit-r1",
+          "nativeId": "mr-native-audit1",
+          "kind": "answered"
+        }
+      ],
+      "expect": {
+        "nodes": {
+          "audit-1": {
+            "execution": "answered",
+            "verification": "unverified"
+          },
+          "audit-evidence-a1": {
+            "verification": "unverified"
+          },
+          "publish-X": {
+            "gate": "waiting"
+          },
+          "publish-Y": {
+            "gate": "waiting"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "audit-evidence-a1",
+            "execution": "answered",
+            "verification": {
+              "state": "failed",
+              "reason": "Audit blocks X root-cause group"
+            }
+          },
+          {
+            "id": "publish-X",
+            "gate": {
+              "state": "blocked",
+              "clearingCondition": "Selected X has verified identity, checks, fresh audit, confirmed scope, and reply/resolution readback"
+            },
+            "blocker": {
+              "reason": "X audit fails",
+              "sourceNodeId": "audit-evidence-a1",
+              "externalRequirement": null,
+              "clearingCondition": "Selected X has verified identity, checks, fresh audit, confirmed scope, and reply/resolution readback"
+            },
+            "wait": null
+          },
+          {
+            "id": "publish-Y",
+            "gate": {
+              "state": "cleared",
+              "clearingCondition": "Selected Y has independently verified identity, checks, audit, scope, and reply/resolution readback"
+            },
+            "blocker": null,
+            "wait": null
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "publish-X": {
+            "gate": "blocked"
+          },
+          "publish-Y": {
+            "gate": "cleared"
+          },
+          "audit-1": {
+            "execution": "answered",
+            "verification": "unverified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "linear-sync"
+      },
+      "expect": {
+        "nodes": {
+          "publish-X": {
+            "gate": "blocked"
+          },
+          "publish-Y": {
+            "gate": "cleared"
+          }
+        }
+      }
+    },
+    {
+      "action": "wait-error",
+      "expect": {
+        "unchanged": true,
+        "nodes": {
+          "publish-X": {
+            "gate": "blocked"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "declare",
+        "nodes": [
+          {
+            "id": "audit-2",
+            "logicalId": "audit-2",
+            "label": "audit-2",
+            "role": "Bounded native worker",
+            "stage": "independent-audit",
+            "kind": "worker",
+            "attempt": 1,
+            "nativeName": "mr-68-audit-r2",
+            "gate": null
+          },
+          {
+            "id": "audit-evidence-a2",
+            "logicalId": "audit-evidence",
+            "label": "audit-evidence-a2",
+            "role": "Parent evidence",
+            "stage": "independent-audit",
+            "kind": "parent",
+            "attempt": 2,
+            "nativeName": null,
+            "gate": null
+          }
+        ],
+        "edges": [
+          {
+            "from": "selection",
+            "to": "audit-2",
+            "type": "parent-gate"
+          },
+          {
+            "from": "audit-2",
+            "to": "audit-evidence-a2",
+            "type": "verification"
+          },
+          {
+            "from": "audit-evidence-a2",
+            "to": "publish-X",
+            "type": "verification"
+          }
+        ]
+      },
+      "expect": {
+        "workerCount": 4,
+        "nodes": {
+          "audit-evidence-a1": {
+            "verification": "failed",
+            "currentAttempt": false
+          },
+          "audit-2": {
+            "attempt": 1,
+            "nativeId": null
+          }
+        }
+      }
+    },
+    {
+      "action": "launch",
+      "callId": "mr-audit-retry",
+      "agents": [
+        {
+          "nodeId": "audit-2",
+          "name": "mr-68-audit-r2",
+          "nativeId": "mr-native-audit2"
+        }
+      ],
+      "earlyCompletion": false,
+      "expect": {
+        "nodes": {
+          "audit-2": {
+            "execution": "running",
+            "verification": "unverified",
+            "nativeId": "mr-native-audit2"
+          }
+        }
+      }
+    },
+    {
+      "action": "restart",
+      "expect": {
+        "recovery": "pending",
+        "nodes": {
+          "publish-X": {
+            "gate": "blocked"
+          },
+          "publish-Y": {
+            "gate": "cleared"
+          }
+        }
+      }
+    },
+    {
+      "action": "recover",
+      "rejectNames": [
+        "mr-68-audit-r2"
+      ],
+      "expect": {
+        "recovery": "partial-failure",
+        "preserveSource": true,
+        "nodes": {
+          "publish-X": {
+            "gate": "blocked"
+          },
+          "publish-Y": {
+            "gate": "cleared"
+          },
+          "audit-2": {
+            "execution": "running"
+          }
+        }
+      }
+    },
+    {
+      "action": "recover",
+      "rejectNames": [],
+      "expect": {
+        "recovery": "ready",
+        "nodes": {
+          "audit-2": {
+            "execution": "running",
+            "verification": "unverified",
+            "nativeId": "mr-native-audit2"
+          }
+        }
+      }
+    },
+    {
+      "action": "result",
+      "agents": [
+        {
+          "name": "mr-68-audit-r2",
+          "nativeId": "mr-native-audit2",
+          "kind": "answered"
+        }
+      ],
+      "expect": {
+        "nodes": {
+          "audit-2": {
+            "execution": "answered",
+            "verification": "unverified"
+          },
+          "audit-evidence-a2": {
+            "verification": "unverified"
+          },
+          "publish-X": {
+            "gate": "blocked"
+          },
+          "publish-Y": {
+            "gate": "cleared"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "audit-evidence-a2",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Fresh explicitly authorized retry passes parent audit validation"
+            }
+          },
+          {
+            "id": "publish-X",
+            "gate": {
+              "state": "cleared",
+              "clearingCondition": "Selected X has verified identity, checks, fresh audit, confirmed scope, and reply/resolution readback"
+            },
+            "blocker": null,
+            "wait": null
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "audit-evidence-a1": {
+            "verification": "failed"
+          },
+          "audit-evidence-a2": {
+            "verification": "verified"
+          },
+          "publish-X": {
+            "gate": "cleared"
+          },
+          "publish-Y": {
+            "gate": "cleared"
+          }
+        }
+      }
+    },
+    {
+      "action": "export-failure",
+      "expect": {
+        "nodes": {
+          "publish-X": {
+            "gate": "cleared"
+          },
+          "publish-Y": {
+            "gate": "cleared"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "identity",
+        "nodes": [
+          {
+            "id": "phase-identity",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-identity": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "fetch",
+        "nodes": [
+          {
+            "id": "phase-fetch",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-fetch": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "analysis",
+        "nodes": [
+          {
+            "id": "phase-analysis",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-analysis": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "selection-approval",
+        "nodes": [
+          {
+            "id": "phase-selection-approval",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-selection-approval": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "serial-edits",
+        "nodes": [
+          {
+            "id": "phase-serial-edits",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-serial-edits": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "checks",
+        "nodes": [
+          {
+            "id": "phase-checks",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-checks": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "independent-audit",
+        "nodes": [
+          {
+            "id": "phase-independent-audit",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-independent-audit": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "gitlab-publication",
+        "nodes": [
+          {
+            "id": "phase-gitlab-publication",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-gitlab-publication": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "linear-sync",
+        "nodes": [
+          {
+            "id": "phase-linear-sync",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-linear-sync": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "final-report",
+        "nodes": [
+          {
+            "id": "phase-final-report",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-final-report": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "topology": "declared",
+        "status": "succeeded"
+      },
+      "expect": {
+        "status": "succeeded",
+        "workerCount": 4,
+        "nodes": {
+          "analysis-code": {
+            "nativeId": "mr-native-code",
+            "attempt": 1
+          },
+          "X-evidence-a1": {
+            "verification": "failed",
+            "currentAttempt": false
+          },
+          "X-evidence-a2": {
+            "verification": "verified",
+            "currentAttempt": true
+          },
+          "audit-evidence-a1": {
+            "verification": "failed",
+            "currentAttempt": false
+          },
+          "audit-evidence-a2": {
+            "verification": "verified",
+            "currentAttempt": true
+          }
+        }
+      }
+    },
+    {
+      "action": "links",
+      "expect": {
+        "status": "succeeded"
+      }
+    }
+  ],
+  "cancellation": {
+    "afterStep": 0,
+    "steps": [
+      {
+        "action": "result",
+        "agents": [
+          {
+            "name": "mr-68-analysis-code-r1",
+            "nativeId": "mr-native-code",
+            "kind": "stopped"
+          },
+          {
+            "name": "mr-68-analysis-tests-r1",
+            "nativeId": "mr-native-tests",
+            "kind": "stopped"
+          }
+        ],
+        "expect": {
+          "status": "active",
+          "nodes": {
+            "selection": {
+              "gate": "waiting"
+            }
+          }
+        }
+      },
+      {
+        "action": "report",
+        "input": {
+          "operation": "update",
+          "status": "cancelled",
+          "nodes": [
+            {
+              "id": "selection",
+              "gate": {
+                "state": "blocked",
+                "clearingCondition": "Explicit authorized continuation and original safety gates"
+              },
+              "blocker": {
+                "reason": "Explicit cancellation",
+                "sourceNodeId": "analysis-code",
+                "externalRequirement": null,
+                "clearingCondition": "Parent verifies termination before continuation"
+              },
+              "wait": null
+            }
+          ]
+        },
+        "expect": {
+          "status": "cancelled",
+          "nodes": {
+            "analysis-code": {
+              "execution": "cancelled",
+              "verification": "unverified",
+              "nativeId": "mr-native-code"
+            },
+            "analysis-tests": {
+              "execution": "cancelled",
+              "verification": "unverified",
+              "nativeId": "mr-native-tests"
+            }
+          }
+        }
+      },
+      {
+        "action": "links",
+        "expect": {
+          "status": "cancelled"
+        }
+      }
+    ]
+  }
+}

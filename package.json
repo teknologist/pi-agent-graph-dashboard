@@ -1,0 +1,23 @@
+{
+  "name": "pi-agent-graph-dashboard",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/agent-graph-dashboard.ts"
+    ],
+    "prompts": []
+  },
+  "version": "0.1.0",
+  "description": "Read-only Pi agent graph reporting with private loopback dashboards and offline exports",
+  "scripts": {
+    "test": "bun test scripts/*.test.ts && node --test scripts/df-ticket-hub.test.mjs"
+  }
+}

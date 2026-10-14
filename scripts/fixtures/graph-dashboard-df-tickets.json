@@ -1,0 +1,1371 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "key": "df-tickets",
+  "command": "/df-implement-tickets",
+  "prompt": "private_df-implement-tickets.md",
+  "stages": [
+    "preflight",
+    "phase-0-selection",
+    "phase-1-plan",
+    "inventory",
+    "implement-wave",
+    "serial-review",
+    "integration-checks",
+    "criteria-repair",
+    "attestation",
+    "phase-3-reconcile",
+    "phase-4-publication"
+  ],
+  "create": {
+    "operation": "create",
+    "runName": "Synthetic df-tickets",
+    "command": "/df-implement-tickets",
+    "currentStage": "preflight",
+    "topology": "unknown-future",
+    "nodes": [
+      {
+        "id": "phase-preflight",
+        "logicalId": "phase-preflight",
+        "label": "phase-preflight",
+        "role": "Parent evidence",
+        "stage": "preflight",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-phase-0-selection",
+        "logicalId": "phase-phase-0-selection",
+        "label": "phase-phase-0-selection",
+        "role": "Parent evidence",
+        "stage": "phase-0-selection",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-phase-1-plan",
+        "logicalId": "phase-phase-1-plan",
+        "label": "phase-phase-1-plan",
+        "role": "Parent evidence",
+        "stage": "phase-1-plan",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-inventory",
+        "logicalId": "phase-inventory",
+        "label": "phase-inventory",
+        "role": "Parent evidence",
+        "stage": "inventory",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-implement-wave",
+        "logicalId": "phase-implement-wave",
+        "label": "phase-implement-wave",
+        "role": "Parent evidence",
+        "stage": "implement-wave",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-serial-review",
+        "logicalId": "phase-serial-review",
+        "label": "phase-serial-review",
+        "role": "Parent evidence",
+        "stage": "serial-review",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-integration-checks",
+        "logicalId": "phase-integration-checks",
+        "label": "phase-integration-checks",
+        "role": "Parent evidence",
+        "stage": "integration-checks",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-criteria-repair",
+        "logicalId": "phase-criteria-repair",
+        "label": "phase-criteria-repair",
+        "role": "Parent evidence",
+        "stage": "criteria-repair",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-attestation",
+        "logicalId": "phase-attestation",
+        "label": "phase-attestation",
+        "role": "Parent evidence",
+        "stage": "attestation",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-phase-3-reconcile",
+        "logicalId": "phase-phase-3-reconcile",
+        "label": "phase-phase-3-reconcile",
+        "role": "Parent evidence",
+        "stage": "phase-3-reconcile",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "phase-phase-4-publication",
+        "logicalId": "phase-phase-4-publication",
+        "label": "phase-phase-4-publication",
+        "role": "Parent evidence",
+        "stage": "phase-4-publication",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "worker-A",
+        "logicalId": "worker-A",
+        "label": "worker-A",
+        "role": "Bounded native worker",
+        "stage": "implement",
+        "kind": "worker",
+        "attempt": 1,
+        "nativeName": "df-A-implement-r1",
+        "gate": null
+      },
+      {
+        "id": "worker-B",
+        "logicalId": "worker-B",
+        "label": "worker-B",
+        "role": "Bounded native worker",
+        "stage": "implement",
+        "kind": "worker",
+        "attempt": 1,
+        "nativeName": "df-B-implement-r1",
+        "gate": null
+      },
+      {
+        "id": "dependency-C",
+        "logicalId": "dependency-C",
+        "label": "dependency-C",
+        "role": "Parent gate",
+        "stage": "implement",
+        "kind": "gate",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": {
+          "state": "waiting",
+          "clearingCondition": "Parent proves A integration ancestry, clean review, and plan verification"
+        }
+      },
+      {
+        "id": "publication",
+        "logicalId": "publication",
+        "label": "publication",
+        "role": "Parent gate",
+        "stage": "publication",
+        "kind": "gate",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": {
+          "state": "waiting",
+          "clearingCondition": "Every selected issue has reconciled review, criteria, attestation, and green plan; remote identity matches"
+        }
+      },
+      {
+        "id": "A-evidence-a1",
+        "logicalId": "A-evidence",
+        "label": "A-evidence-a1",
+        "role": "Parent evidence",
+        "stage": "implement",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "B-evidence",
+        "logicalId": "B-evidence",
+        "label": "B-evidence",
+        "role": "Parent evidence",
+        "stage": "implement",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      },
+      {
+        "id": "A-role-a1",
+        "logicalId": "A-role",
+        "label": "A-role-a1",
+        "role": "Implement",
+        "stage": "implement",
+        "kind": "parent",
+        "attempt": 1,
+        "nativeName": null,
+        "gate": null
+      }
+    ],
+    "edges": [
+      {
+        "from": "phase-preflight",
+        "to": "phase-phase-0-selection",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-phase-0-selection",
+        "to": "phase-phase-1-plan",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-phase-1-plan",
+        "to": "phase-inventory",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-inventory",
+        "to": "phase-implement-wave",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-implement-wave",
+        "to": "phase-serial-review",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-serial-review",
+        "to": "phase-integration-checks",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-integration-checks",
+        "to": "phase-criteria-repair",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-criteria-repair",
+        "to": "phase-attestation",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-attestation",
+        "to": "phase-phase-3-reconcile",
+        "type": "parent-gate"
+      },
+      {
+        "from": "phase-phase-3-reconcile",
+        "to": "phase-phase-4-publication",
+        "type": "parent-gate"
+      },
+      {
+        "from": "worker-A",
+        "to": "A-evidence-a1",
+        "type": "verification"
+      },
+      {
+        "from": "A-evidence-a1",
+        "to": "dependency-C",
+        "type": "verification"
+      },
+      {
+        "from": "worker-B",
+        "to": "B-evidence",
+        "type": "verification"
+      },
+      {
+        "from": "dependency-C",
+        "to": "publication",
+        "type": "parent-gate"
+      },
+      {
+        "from": "worker-A",
+        "to": "A-role-a1",
+        "type": "verification"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "publication",
+            "gate": {
+              "state": "awaiting-approval",
+              "clearingCondition": "Every selected issue has reconciled review, criteria, attestation, and green plan; remote identity matches"
+            },
+            "blocker": null,
+            "wait": {
+              "reason": "Selection preview confirmation pending",
+              "sourceNodeId": null,
+              "externalRequirement": "Existing Proceed confirmation",
+              "clearingCondition": "User confirms existing selection preview"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "publication": {
+            "gate": "awaiting-approval",
+            "wait": "Selection preview confirmation pending"
+          }
+        }
+      }
+    },
+    {
+      "action": "launch",
+      "callId": "df-batch1",
+      "agents": [
+        {
+          "nodeId": "worker-A",
+          "name": "df-A-implement-r1",
+          "nativeId": "df-native-A"
+        },
+        {
+          "nodeId": "worker-B",
+          "name": "df-B-implement-r1",
+          "nativeId": "df-native-B"
+        }
+      ],
+      "earlyCompletion": true,
+      "expect": {
+        "nodes": {
+          "worker-A": {
+            "execution": "answered",
+            "verification": "unverified",
+            "nativeId": "df-native-A"
+          },
+          "worker-B": {
+            "execution": "answered",
+            "verification": "unverified",
+            "nativeId": "df-native-B"
+          }
+        }
+      }
+    },
+    {
+      "action": "wait-error",
+      "expect": {
+        "nodes": {
+          "worker-A": {
+            "execution": "answered",
+            "verification": "unverified",
+            "nativeId": "df-native-A"
+          },
+          "worker-B": {
+            "execution": "answered",
+            "verification": "unverified",
+            "nativeId": "df-native-B"
+          }
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "A-evidence-a1",
+            "execution": "answered",
+            "verification": {
+              "state": "unknown",
+              "reason": "Output format is incomplete; request corrected evidence only within Implement attempt 1"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "workerCount": 2,
+        "nodes": {
+          "A-evidence-a1": {
+            "verification": "unknown"
+          },
+          "A-role-a1": {
+            "attempt": 1,
+            "verification": "unverified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "declare",
+        "nodes": [
+          {
+            "id": "A-evidence-a2",
+            "logicalId": "A-evidence",
+            "label": "A-evidence-a2",
+            "role": "Parent evidence",
+            "stage": "implement",
+            "kind": "parent",
+            "attempt": 2,
+            "nativeName": null,
+            "gate": null
+          }
+        ],
+        "edges": [
+          {
+            "from": "worker-A",
+            "to": "A-evidence-a2",
+            "type": "verification"
+          },
+          {
+            "from": "A-evidence-a2",
+            "to": "dependency-C",
+            "type": "verification"
+          }
+        ]
+      },
+      "expect": {
+        "workerCount": 2,
+        "nodes": {
+          "A-evidence-a1": {
+            "verification": "unknown",
+            "currentAttempt": false
+          },
+          "A-evidence-a2": {
+            "attempt": 2,
+            "nativeId": null
+          },
+          "A-role-a1": {
+            "attempt": 1,
+            "currentAttempt": true
+          }
+        }
+      }
+    },
+    {
+      "action": "observe",
+      "tool": "agent_send",
+      "agents": [
+        {
+          "nodeId": "worker-A",
+          "name": "df-A-implement-r1",
+          "nativeId": "df-native-A"
+        }
+      ],
+      "state": "working",
+      "expect": {
+        "workerCount": 2,
+        "nodes": {
+          "worker-A": {
+            "execution": "running",
+            "nativeId": "df-native-A",
+            "attempt": 1
+          },
+          "A-role-a1": {
+            "attempt": 1,
+            "verification": "unverified"
+          }
+        }
+      }
+    },
+    {
+      "action": "result",
+      "agents": [
+        {
+          "name": "df-A-implement-r1",
+          "nativeId": "df-native-A",
+          "kind": "answered"
+        }
+      ],
+      "expect": {
+        "workerCount": 2,
+        "nodes": {
+          "worker-A": {
+            "execution": "answered",
+            "verification": "unverified"
+          },
+          "A-evidence-a2": {
+            "verification": "unverified"
+          },
+          "A-role-a1": {
+            "attempt": 1,
+            "verification": "unverified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "A-evidence-a2",
+            "execution": "answered",
+            "verification": {
+              "state": "failed",
+              "reason": "Required synthetic verification fails"
+            }
+          },
+          {
+            "id": "A-role-a1",
+            "execution": "answered",
+            "verification": {
+              "state": "failed",
+              "reason": "Unexpected required synthetic verification fails; Implement attempt 1 ends"
+            }
+          },
+          {
+            "id": "B-evidence",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "B independently verified"
+            }
+          },
+          {
+            "id": "dependency-C",
+            "gate": {
+              "state": "blocked",
+              "clearingCondition": "Parent proves A integration ancestry, clean review, and plan verification"
+            },
+            "blocker": {
+              "reason": "A lacks verified integration",
+              "sourceNodeId": "A-evidence-a2",
+              "externalRequirement": null,
+              "clearingCondition": "Parent proves A integration ancestry, clean review, and plan verification"
+            },
+            "wait": null
+          },
+          {
+            "id": "publication",
+            "gate": {
+              "state": "blocked",
+              "clearingCondition": "Every selected issue has reconciled review, criteria, attestation, and green plan; remote identity matches"
+            },
+            "blocker": {
+              "reason": "A required verification fails",
+              "sourceNodeId": "A-evidence-a2",
+              "externalRequirement": null,
+              "clearingCondition": "Every selected issue has reconciled review, criteria, attestation, and green plan; remote identity matches"
+            },
+            "wait": null
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "A-role-a1": {
+            "verification": "failed",
+            "attempt": 1
+          },
+          "A-evidence-a2": {
+            "verification": "failed"
+          },
+          "B-evidence": {
+            "verification": "verified"
+          },
+          "dependency-C": {
+            "gate": "blocked"
+          },
+          "publication": {
+            "gate": "blocked"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "declare",
+        "nodes": [
+          {
+            "id": "A-evidence-a3",
+            "logicalId": "A-evidence",
+            "label": "A-evidence-a3",
+            "role": "Parent evidence",
+            "stage": "implement",
+            "kind": "parent",
+            "attempt": 3,
+            "nativeName": null,
+            "gate": null
+          },
+          {
+            "id": "A-role-a2",
+            "logicalId": "A-role",
+            "label": "A-role-a2",
+            "role": "Implement",
+            "stage": "implement",
+            "kind": "parent",
+            "attempt": 2,
+            "nativeName": null,
+            "gate": null
+          }
+        ],
+        "edges": [
+          {
+            "from": "worker-A",
+            "to": "A-evidence-a3",
+            "type": "verification"
+          },
+          {
+            "from": "A-evidence-a3",
+            "to": "dependency-C",
+            "type": "verification"
+          },
+          {
+            "from": "worker-A",
+            "to": "A-role-a2",
+            "type": "verification"
+          }
+        ]
+      },
+      "expect": {
+        "workerCount": 2,
+        "nodes": {
+          "A-evidence-a2": {
+            "currentAttempt": false,
+            "verification": "failed"
+          },
+          "A-evidence-a3": {
+            "kind": "parent",
+            "nativeId": null,
+            "attempt": 3
+          },
+          "A-role-a1": {
+            "verification": "failed",
+            "currentAttempt": false
+          },
+          "A-role-a2": {
+            "attempt": 2,
+            "kind": "parent",
+            "nativeId": null
+          }
+        }
+      }
+    },
+    {
+      "action": "observe",
+      "tool": "agent_send",
+      "agents": [
+        {
+          "nodeId": "worker-A",
+          "name": "df-A-implement-r1",
+          "nativeId": "df-native-A"
+        }
+      ],
+      "state": "working",
+      "expect": {
+        "workerCount": 2,
+        "nodes": {
+          "worker-A": {
+            "execution": "running",
+            "nativeId": "df-native-A"
+          },
+          "worker-B": {
+            "execution": "answered",
+            "nativeId": "df-native-B"
+          },
+          "A-evidence-a2": {
+            "verification": "failed"
+          }
+        }
+      }
+    },
+    {
+      "action": "result",
+      "agents": [
+        {
+          "name": "df-A-implement-r1",
+          "nativeId": "df-native-A",
+          "kind": "answered"
+        }
+      ],
+      "expect": {
+        "nodes": {
+          "worker-A": {
+            "execution": "answered",
+            "verification": "unverified"
+          },
+          "A-evidence-a3": {
+            "verification": "unverified"
+          },
+          "A-evidence-a2": {
+            "verification": "failed"
+          },
+          "dependency-C": {
+            "gate": "blocked"
+          },
+          "publication": {
+            "gate": "blocked"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "A-evidence-a3",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Parent verifies same-worker attempt without changing native identity"
+            }
+          },
+          {
+            "id": "dependency-C",
+            "gate": {
+              "state": "cleared",
+              "clearingCondition": "Parent proves A integration ancestry, clean review, and plan verification"
+            },
+            "blocker": null,
+            "wait": null
+          },
+          {
+            "id": "A-role-a2",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Parent verifies corrective work in recorded Implement attempt 2"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "worker-A": {
+            "execution": "answered",
+            "verification": "unverified",
+            "nativeId": "df-native-A"
+          },
+          "A-evidence-a2": {
+            "verification": "failed",
+            "currentAttempt": false
+          },
+          "A-evidence-a3": {
+            "verification": "verified"
+          },
+          "dependency-C": {
+            "gate": "cleared"
+          },
+          "A-role-a2": {
+            "verification": "verified",
+            "attempt": 2
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "declare",
+        "nodes": [
+          {
+            "id": "worker-C",
+            "logicalId": "worker-C",
+            "label": "worker-C",
+            "role": "Bounded native worker",
+            "stage": "implement",
+            "kind": "worker",
+            "attempt": 1,
+            "nativeName": "df-C-implement-r1",
+            "gate": null
+          },
+          {
+            "id": "C-evidence",
+            "logicalId": "C-evidence",
+            "label": "C-evidence",
+            "role": "Parent evidence",
+            "stage": "implement",
+            "kind": "parent",
+            "attempt": 1,
+            "nativeName": null,
+            "gate": null
+          }
+        ],
+        "edges": [
+          {
+            "from": "dependency-C",
+            "to": "worker-C",
+            "type": "parent-gate"
+          },
+          {
+            "from": "worker-C",
+            "to": "C-evidence",
+            "type": "verification"
+          }
+        ]
+      },
+      "expect": {
+        "workerCount": 3
+      }
+    },
+    {
+      "action": "launch",
+      "callId": "df-C-launch",
+      "agents": [
+        {
+          "nodeId": "worker-C",
+          "name": "df-C-implement-r1",
+          "nativeId": "df-native-C"
+        }
+      ],
+      "earlyCompletion": false,
+      "expect": {
+        "nodes": {
+          "worker-C": {
+            "execution": "running",
+            "verification": "unverified",
+            "nativeId": "df-native-C"
+          }
+        }
+      }
+    },
+    {
+      "action": "restart",
+      "expect": {
+        "recovery": "pending",
+        "nodes": {
+          "publication": {
+            "gate": "blocked"
+          }
+        }
+      }
+    },
+    {
+      "action": "recover",
+      "rejectNames": [
+        "df-C-implement-r1"
+      ],
+      "expect": {
+        "recovery": "partial-failure",
+        "preserveSource": true,
+        "nodes": {
+          "worker-C": {
+            "execution": "running",
+            "nativeId": "df-native-C"
+          },
+          "publication": {
+            "gate": "blocked"
+          }
+        }
+      }
+    },
+    {
+      "action": "recover",
+      "rejectNames": [],
+      "expect": {
+        "recovery": "ready",
+        "nodes": {
+          "worker-C": {
+            "execution": "running",
+            "verification": "unverified",
+            "nativeId": "df-native-C"
+          }
+        }
+      }
+    },
+    {
+      "action": "result",
+      "agents": [
+        {
+          "name": "df-C-implement-r1",
+          "nativeId": "df-native-C",
+          "kind": "answered"
+        }
+      ],
+      "expect": {
+        "nodes": {
+          "worker-C": {
+            "execution": "answered",
+            "verification": "unverified"
+          },
+          "C-evidence": {
+            "verification": "unverified"
+          },
+          "publication": {
+            "gate": "blocked"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "nodes": [
+          {
+            "id": "C-evidence",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Parent verifies C"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "C-evidence": {
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "export-failure",
+      "expect": {
+        "nodes": {
+          "publication": {
+            "gate": "blocked"
+          },
+          "A-evidence-a2": {
+            "verification": "failed"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "preflight",
+        "nodes": [
+          {
+            "id": "phase-preflight",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-preflight": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "phase-0-selection",
+        "nodes": [
+          {
+            "id": "phase-phase-0-selection",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-phase-0-selection": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "phase-1-plan",
+        "nodes": [
+          {
+            "id": "phase-phase-1-plan",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-phase-1-plan": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "inventory",
+        "nodes": [
+          {
+            "id": "phase-inventory",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-inventory": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "implement-wave",
+        "nodes": [
+          {
+            "id": "phase-implement-wave",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-implement-wave": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "serial-review",
+        "nodes": [
+          {
+            "id": "phase-serial-review",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-serial-review": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "integration-checks",
+        "nodes": [
+          {
+            "id": "phase-integration-checks",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-integration-checks": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "criteria-repair",
+        "nodes": [
+          {
+            "id": "phase-criteria-repair",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-criteria-repair": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "attestation",
+        "nodes": [
+          {
+            "id": "phase-attestation",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-attestation": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "phase-3-reconcile",
+        "nodes": [
+          {
+            "id": "phase-phase-3-reconcile",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-phase-3-reconcile": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "currentStage": "phase-4-publication",
+        "nodes": [
+          {
+            "id": "phase-phase-4-publication",
+            "execution": "answered",
+            "verification": {
+              "state": "verified",
+              "reason": "Synthetic parent phase evidence only"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "phase-phase-4-publication": {
+            "execution": "answered",
+            "verification": "verified"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "topology": "declared",
+        "nodes": [
+          {
+            "id": "publication",
+            "gate": {
+              "state": "cleared",
+              "clearingCondition": "Every selected issue has reconciled review, criteria, attestation, and green plan; remote identity matches"
+            },
+            "blocker": null,
+            "wait": null
+          }
+        ]
+      },
+      "expect": {
+        "nodes": {
+          "publication": {
+            "gate": "cleared"
+          }
+        }
+      }
+    },
+    {
+      "action": "report",
+      "input": {
+        "operation": "update",
+        "status": "succeeded"
+      },
+      "expect": {
+        "status": "succeeded",
+        "workerCount": 3,
+        "nodes": {
+          "A-evidence-a1": {
+            "verification": "unknown",
+            "currentAttempt": false
+          },
+          "A-evidence-a2": {
+            "verification": "failed",
+            "currentAttempt": false
+          },
+          "A-evidence-a3": {
+            "verification": "verified",
+            "currentAttempt": true
+          },
+          "A-role-a1": {
+            "verification": "failed",
+            "currentAttempt": false,
+            "attempt": 1
+          },
+          "A-role-a2": {
+            "verification": "verified",
+            "currentAttempt": true,
+            "attempt": 2
+          },
+          "worker-A": {
+            "nativeId": "df-native-A",
+            "attempt": 1,
+            "verification": "unverified"
+          }
+        }
+      }
+    },
+    {
+      "action": "links",
+      "expect": {
+        "status": "succeeded"
+      }
+    }
+  ],
+  "cancellation": {
+    "afterStep": 1,
+    "steps": [
+      {
+        "action": "result",
+        "agents": [
+          {
+            "name": "df-A-implement-r1",
+            "nativeId": "df-native-A",
+            "kind": "stopped"
+          },
+          {
+            "name": "df-B-implement-r1",
+            "nativeId": "df-native-B",
+            "kind": "stopped"
+          }
+        ],
+        "expect": {
+          "status": "active",
+          "nodes": {
+            "publication": {
+              "gate": "awaiting-approval"
+            }
+          }
+        }
+      },
+      {
+        "action": "report",
+        "input": {
+          "operation": "update",
+          "status": "cancelled",
+          "nodes": [
+            {
+              "id": "publication",
+              "gate": {
+                "state": "blocked",
+                "clearingCondition": "Explicit authorized continuation and original safety gates"
+              },
+              "blocker": {
+                "reason": "Explicit cancellation",
+                "sourceNodeId": "worker-A",
+                "externalRequirement": null,
+                "clearingCondition": "Parent verifies termination before continuation"
+              },
+              "wait": null
+            }
+          ]
+        },
+        "expect": {
+          "status": "cancelled",
+          "nodes": {
+            "worker-A": {
+              "execution": "cancelled",
+              "verification": "unverified",
+              "nativeId": "df-native-A"
+            },
+            "worker-B": {
+              "execution": "cancelled",
+              "verification": "unverified",
+              "nativeId": "df-native-B"
+            }
+          }
+        }
+      },
+      {
+        "action": "links",
+        "expect": {
+          "status": "cancelled"
+        }
+      }
+    ]
+  }
+}
