@@ -380,6 +380,17 @@ export function createGraphDashboardRuntime(options: { directory: string; append
     queue = result.catch(() => {})
     return result
   }
+  function branchCheckpoint(ctx: Context) {
+    const entry = branch(ctx).reverse().find(entry => entry.type === 'custom' && entry.customType === ENTRY)
+    if (!entry) return null
+    const saved = entry.data as Checkpoint
+    exact(saved, ['version', 'snapshot', 'names', 'bindings'])
+    if (saved.version !== 1 || !saved.names || !Array.isArray(saved.bindings)) fail('invalid checkpoint')
+    const snapshot = validateGraphSnapshot(saved.snapshot)
+    validateCheckpointMetadata(snapshot, saved.names, saved.bindings)
+    if (typeof entry.id !== 'string') fail('missing checkpoint entry identity')
+    return { checkpoint: structuredClone({ ...saved, snapshot }), id: entry.id }
+  }
   async function restore(ctx: Context) {
     const token = ++generation
     context = ctx; active = null; writable = false; checkpointId = null
@@ -387,18 +398,13 @@ export function createGraphDashboardRuntime(options: { directory: string; append
     await stopServer()
     if (generation !== token) return
     ctx.ui.setStatus(STATUS, undefined)
-    const entry = branch(ctx).reverse().find(entry => entry.type === 'custom' && entry.customType === ENTRY)
-    if (!entry) return
     try {
-      const saved = entry.data as Checkpoint
-      exact(saved, ['version', 'snapshot', 'names', 'bindings'])
-      if (saved.version !== 1 || !saved.names || !Array.isArray(saved.bindings)) fail('invalid checkpoint')
-      const snapshot = validateGraphSnapshot(saved.snapshot)
+      const restored = branchCheckpoint(ctx)
+      if (!restored) return
+      const saved = restored.checkpoint, snapshot = saved.snapshot
       if (snapshot.parentSessionId !== ctx.sessionManager.getSessionId()) { report(ctx, 'inherited run belongs to another parent; original report is unchanged'); return }
-      validateCheckpointMetadata(snapshot, saved.names, saved.bindings)
-      active = structuredClone({ ...saved, snapshot })
-      if (typeof entry.id !== 'string') fail('missing checkpoint entry identity')
-      checkpointId = entry.id
+      active = saved
+      checkpointId = restored.id
       const persisted = store().read()
       if (!persisted || persisted.revision !== snapshot.revision || JSON.stringify(persisted) !== JSON.stringify(snapshot)) { report(ctx, 'branch checkpoint differs from persisted run; reporting is read-only'); links(ctx); return }
       writable = true
@@ -416,7 +422,7 @@ export function createGraphDashboardRuntime(options: { directory: string; append
     }
   }
   async function execute(input: DashboardInput, ctx: Context) {
-    const token = generation
+    let token = generation
     return serialized(async () => {
       if (!context) context = ctx
       if (!sameSession(ctx)) fail('context must be restored before session-bound reporting')
@@ -468,6 +474,26 @@ export function createGraphDashboardRuntime(options: { directory: string; append
         await startServer(ctx, token)
         current(ctx, token)
         return links(ctx)
+      }
+      if (input.operation === 'recover') {
+        // Lifecycle state can describe an earlier tree position. Only the exact
+        // current-branch checkpoint can refresh it; disk/run IDs are not authority.
+        if (generation !== token) fail('session changed; reporting update discarded')
+        const restored = branchCheckpoint(ctx)
+        if (!restored) fail('no checkpoint on this parent branch')
+        const saved = restored.checkpoint, snapshot = saved.snapshot
+        if (snapshot.parentSessionId !== ctx.sessionManager.getSessionId()) fail('inherited run belongs to another parent; original report is unchanged')
+        if (snapshot.runId !== input.runId) fail('foreign run identity')
+        const persisted = createGraphDashboardStore({ directory: options.directory, runId: snapshot.runId, parentSessionId: snapshot.parentSessionId }).read()
+        if (!persisted || JSON.stringify(persisted) !== JSON.stringify(snapshot)) fail('branch checkpoint differs from persisted run; reporting is read-only')
+        if (!writable || checkpointId !== restored.id || JSON.stringify(active) !== JSON.stringify(saved)) {
+          token = ++generation
+          active = saved; writable = true; checkpointId = restored.id
+          unreconciled.clear()
+          for (const binding of saved.bindings) if (snapshot.nodes.some(node => node.id === binding.nodeId && node.currentAttempt)) unreconciled.add(binding.nodeId)
+          await stopServer()
+          current(ctx, token)
+        }
       }
       current(ctx, token)
       if (active!.snapshot.runId !== input.runId) fail('foreign run identity')

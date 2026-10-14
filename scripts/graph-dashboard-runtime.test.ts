@@ -812,6 +812,66 @@ test('forks and earlier branches cannot mutate the original run or append its ch
   expect(state.owner.entries).toHaveLength(count)
 })
 
+// Explicit recovery must reconstruct authority from the current branch, not
+// retain a read-only cache from an earlier tree position. Compaction preserves
+// raw branch entries; its summary and run ID do not grant ownership.
+test('recover resumes the current parent checkpoint after read-only branch continuation and compaction', async () => {
+  const state = setup()
+  const runId = await bound(state)
+  const continuation = structuredClone(state.owner.entries)
+  const original = read(state.directory, runId)
+  state.owner.entries.splice(1)
+  await state.runtime.restore(state.owner.ctx)
+  expect(read(state.directory, runId)).toEqual(original)
+  state.owner.entries.splice(0, state.owner.entries.length, ...continuation)
+  state.owner.appendEntry('unrelated-extension', { restored: true })
+  // The full branch, unlike model context, still contains the exact checkpoint.
+  state.owner.entries.push({ type: 'compaction', id: 'compacted-continuation' })
+  state.owner.status(async () => executionResult(receipt([agent('local-analysis-r1', 'native-1', 'idle')])))
+  await state.runtime.execute({ operation: 'recover', runId }, state.owner.ctx)
+  const after = read(state.directory, runId)
+  expect(after.revision).toBeGreaterThan(original.revision)
+  expect(after.nodes[0].nativeId).toBe('native-1')
+  expect(after.nodes[0].execution.state).toBe('answered')
+  expect(after.nodes[0].verification).toEqual(original.nodes[0].verification)
+  expect(after.nodes.filter(node => node.kind === 'gate')).toEqual(original.nodes.filter(node => node.kind === 'gate'))
+  expect(after.reporting?.recovery).toBe('ready')
+  expect(state.owner.calls).toEqual([{ name: 'agent_status', args: { name: 'local-analysis-r1' } }])
+  await state.runtime.execute({ operation: 'update', runId, currentStage: 'checks' }, state.owner.ctx)
+  expect(read(state.directory, runId).currentStage).toBe('checks')
+})
+
+test.each(['stale', 'missing', 'foreign-parent', 'different-run', 'same-revision-change', 'invalid-metadata'] as const)('recover rejects %s branch authority before status calls or writes', async scenario => {
+  const state = setup()
+  const runId = await bound(state)
+  const original = read(state.directory, runId)
+  let owner = state.owner
+  if (scenario === 'stale') owner.entries.splice(1)
+  else if (scenario === 'missing') owner.entries.splice(0)
+  else if (scenario === 'foreign-parent') {
+    owner = host('fork-parent')
+    owner.entries.push(...structuredClone(state.owner.entries))
+    await state.runtime.restore(owner.ctx)
+  } else {
+    const latest = owner.entries.filter(entry => entry.customType === 'agent-graph-dashboard:v1').at(-1)!.data as { snapshot: GraphSnapshot; names: Record<string, string> }
+    if (scenario === 'different-run') latest.snapshot.runId = 'another-run'
+    else if (scenario === 'same-revision-change') latest.snapshot.currentStage = 'another-stage'
+    else latest.names = {}
+  }
+  const entries = structuredClone(owner.entries)
+  const artifacts = readdirSync(state.directory).sort().map(name => [name, readFileSync(join(state.directory, name), 'utf8')])
+  const reason = {
+    stale: 'branch checkpoint differs from persisted run', missing: 'no checkpoint on this parent branch',
+    'foreign-parent': 'inherited run belongs to another parent', 'different-run': 'foreign run identity',
+    'same-revision-change': 'branch checkpoint differs from persisted run', 'invalid-metadata': 'inconsistent checkpoint names',
+  }[scenario]
+  await expect(state.runtime.execute({ operation: 'recover', runId }, owner.ctx)).rejects.toThrow(reason)
+  expect(owner.calls).toEqual([])
+  expect(owner.entries).toEqual(entries)
+  expect(read(state.directory, runId)).toEqual(original)
+  expect(readdirSync(state.directory).sort().map(name => [name, readFileSync(join(state.directory, name), 'utf8')])).toEqual(artifacts)
+})
+
 // Regression: an awaited status call commits after session replacement. This
 // deferred response controls timing only; the runtime must enforce generation.
 test.each(['resolved', 'rejected'] as const)('late %s reconciliation after session replacement cannot commit or appendEntry', async settlement => {
