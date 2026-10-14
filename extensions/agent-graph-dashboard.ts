@@ -55,16 +55,16 @@ export default function (pi: ExtensionAPI) {
       const result = await ensure().execute({ operation: 'show', runId: currentRunId }, dashboardContext(ctx))
       const { command, args } = dashboardBrowserCommand(result.reportUrl ?? result.fileUrl)
       const opened = await pi.exec(command, args, { timeout: 10000 })
-      if (opened.code !== 0 || opened.killed) throw new Error(`${command} failed: ${opened.stderr.trim() || `exit ${opened.code}`}`)
+      if (opened.code !== 0 || opened.killed) throw new Error(`${command} failed: ${opened.stderr.trim() || opened.stdout.trim() || (opened.killed ? 'timed out' : `exit ${opened.code}`)}`)
       ctx.ui.notify(`Browser open requested. Report: ${result.reportUrl ?? result.fileUrl}`, 'info')
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       ctx.ui.notify(`Graph dashboard: browser open failed: ${reason}. Use /agent-graph-dashboard for report links.`, 'error')
     } finally { opening = false }
   }
-  const dashboardContext = (ctx: ExtensionContext): ExtensionContext => ({
-    ...ctx,
-    ui: {
+  const dashboardContext = (ctx: ExtensionContext): ExtensionContext => Object.defineProperties({}, {
+    ...Object.getOwnPropertyDescriptors(ctx),
+    ui: { value: {
       ...ctx.ui,
       setStatus(key, text) {
         if (key !== 'agent-graph-dashboard' || !ctx.hasUI || ctx.mode !== 'tui') { ctx.ui.setStatus(key, text); return }
@@ -89,8 +89,8 @@ export default function (pi: ExtensionAPI) {
           }
         }, { placement: 'belowEditor' })
       },
-    },
-  })
+    } },
+  }) as ExtensionContext
   const restore = async (original: ExtensionContext) => {
     const ctx = dashboardContext(original)
     currentRunId = null

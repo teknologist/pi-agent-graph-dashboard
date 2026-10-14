@@ -1,5 +1,5 @@
 import { afterEach, expect, mock, test } from 'bun:test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent'
@@ -23,6 +23,10 @@ afterEach(async () => {
 })
 
 test('command and status click open only the owned report, and failures retain worker gates', async () => {
+  const helper = join(root, '.local/state/herdr/gpui/bin/herdr-gpui')
+  mkdirSync(join(root, '.local/state/herdr/gpui/bin'), { recursive: true })
+  writeFileSync(helper, '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+  process.env.HOME = root
   process.env.HERDR_WORKSPACE_ID = 'workspace-fixture'
   process.env.HERDR_SOCKET_PATH = '/tmp/herdr-fixture.sock'
   process.env.SSH_CONNECTION = 'client 123 host 22'
@@ -49,6 +53,9 @@ test('command and status click open only the owned report, and failures retain w
       setWidget(_key: string, factory?: () => Widget) { widget = factory?.() },
     },
   } as unknown as ExtensionContext
+  // Pi adds executeTool with Object.defineProperties, so it is not enumerable.
+  Object.defineProperty(ctx, 'executeTool', { value: async () => { throw new Error('No workers are declared in this fixture') } })
+  expect(Object.keys(ctx)).not.toContain('executeTool')
   register({
     on(name: string, callback: (event: unknown, ctx: ExtensionContext) => Promise<void>) { events.set(name, callback) },
     registerCommand(name: string, command: { handler: Handler }) { commands.set(name, command.handler) },
@@ -64,13 +71,15 @@ test('command and status click open only the owned report, and failures retain w
   expect(notices.at(-1)).toContain('No graph dashboard')
   const result = await tool!.execute('create', { operation: 'create', runName: 'Browser fixture', command: '/gitlab-address-pr-agent-review', currentStage: 'test', topology: 'unknown-future', nodes: [], edges: [] }, undefined, undefined, ctx)
   expect(calls).toHaveLength(0)
+  const recovered = await tool!.execute('recover', { operation: 'recover', runId: result.details.runId }, undefined, undefined, ctx)
+  expect(recovered.details.runId).toBe(result.details.runId)
   expect(widget).toBeDefined()
   expect(widget!.render(160)[0]).not.toContain('\x1b]8')
   expect(widget!.render(160)[0]).toContain('Open dashboard')
   await commands.get('agent-graph-dashboard-open')!('http://evil.example', ctx)
   expect(calls).toHaveLength(0)
   await commands.get('agent-graph-dashboard-open')!('', ctx)
-  expect(calls).toEqual([{ command: 'herdr-gpui', args: ['browser', 'open', result.details.reportUrl] }])
+  expect(calls).toEqual([{ command: helper, args: ['browser', 'open', result.details.reportUrl] }])
   const click = { type: 'click', button: 'left', x: 1, y: 0, shift: false, alt: false, ctrl: false } as TuiMouseEvent
   widget!.render(160)
   expect(widget!.handleMouse({ ...click, button: 'right' })).toBeUndefined()
